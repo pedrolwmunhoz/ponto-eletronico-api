@@ -1,0 +1,30 @@
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ponto-eletronico-api
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ponto_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+jwt:
+  public.key: classpath:keys/app.pub
+  private.key: classpath:keys/app.key
+
+app:
+  jwt:
+    expiration-ms: 900000
+    refresh-expiration-ms: 86400000
+  brute-force:
+    max-tentativas: 5
+    janela-minutos: 15
