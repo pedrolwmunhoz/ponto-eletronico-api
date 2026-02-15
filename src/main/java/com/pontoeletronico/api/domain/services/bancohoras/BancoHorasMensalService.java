@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -90,7 +90,7 @@ public class BancoHorasMensalService {
                     novo.setMotivoInconsistencia(null);
                     novo.setAtivo(true);
                     novo.setDataDesativacao(null);
-                    novo.setCreatedAt(Instant.now());
+                    novo.setCreatedAt(LocalDateTime.now());
                     return bancoHorasMensalRepository.save(novo);
                 });
     }

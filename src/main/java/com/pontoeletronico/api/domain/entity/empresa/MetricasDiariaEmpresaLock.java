@@ -5,7 +5,10 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "metricas_diaria_empresa_lock")
 @IdClass(MetricasDiariaEmpresaLockId.class)
 public class MetricasDiariaEmpresaLock {
@@ -17,11 +20,6 @@ public class MetricasDiariaEmpresaLock {
     @Id
     @Column(name = "data_ref", nullable = false)
     private LocalDate dataRef;
-
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
-    public LocalDate getDataRef() { return dataRef; }
-    public void setDataRef(LocalDate dataRef) { this.dataRef = dataRef; }
 
     @Override
     public boolean equals(Object o) {

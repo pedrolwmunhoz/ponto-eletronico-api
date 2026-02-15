@@ -1,11 +1,14 @@
 package com.pontoeletronico.api.domain.entity.empresa;
 
 import jakarta.persistence.*;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "identificacao_funcionario")
 public class IdentificacaoFuncionario {
 
@@ -32,24 +35,7 @@ public class IdentificacaoFuncionario {
     private java.time.LocalDate dataNascimento;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public UUID getFuncionarioId() { return funcionarioId; }
-    public void setFuncionarioId(UUID funcionarioId) { this.funcionarioId = funcionarioId; }
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
-    public String getNomeCompleto() { return nomeCompleto; }
-    public void setNomeCompleto(String nomeCompleto) { this.nomeCompleto = nomeCompleto; }
-    public String getCpf() { return cpf; }
-    public void setCpf(String cpf) { this.cpf = cpf; }
-    public Integer getCodigoPonto() { return codigoPonto; }
-    public void setCodigoPonto(Integer codigoPonto) { this.codigoPonto = codigoPonto; }
-    public java.time.LocalDate getDataNascimento() { return dataNascimento; }
-    public void setDataNascimento(java.time.LocalDate dataNascimento) { this.dataNascimento = dataNascimento; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    private LocalDateTime updatedAt;
 
     @Override
     public boolean equals(Object o) {

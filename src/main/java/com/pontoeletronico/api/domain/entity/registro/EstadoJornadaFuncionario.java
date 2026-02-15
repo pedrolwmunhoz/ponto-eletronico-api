@@ -5,17 +5,11 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 @Entity
 @Table(name = "estado_jornada_funcionario")
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
+@Data
 public class EstadoJornadaFuncionario {
 
     @Id

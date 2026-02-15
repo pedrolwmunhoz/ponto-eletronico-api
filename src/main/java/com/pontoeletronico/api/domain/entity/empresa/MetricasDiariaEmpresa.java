@@ -7,7 +7,10 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "metricas_diaria_empresa", uniqueConstraints = @UniqueConstraint(columnNames = {"empresa_id", "data_ref"}))
 public class MetricasDiariaEmpresa {
 
@@ -39,25 +42,6 @@ public class MetricasDiariaEmpresa {
 
     @Column(name = "total_ponto_hoje", nullable = false)
     private Integer totalPontoHoje = 0;
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
-    public LocalDate getDataRef() { return dataRef; }
-    public void setDataRef(LocalDate dataRef) { this.dataRef = dataRef; }
-    public Integer getAnoRef() { return anoRef; }
-    public void setAnoRef(Integer anoRef) { this.anoRef = anoRef; }
-    public Integer getMesRef() { return mesRef; }
-    public void setMesRef(Integer mesRef) { this.mesRef = mesRef; }
-    public Integer getQuantidadeFuncionarios() { return quantidadeFuncionarios; }
-    public void setQuantidadeFuncionarios(Integer quantidadeFuncionarios) { this.quantidadeFuncionarios = quantidadeFuncionarios != null ? quantidadeFuncionarios : 0; }
-    public Integer getSolicitacoesPendentes() { return solicitacoesPendentes; }
-    public void setSolicitacoesPendentes(Integer solicitacoesPendentes) { this.solicitacoesPendentes = solicitacoesPendentes != null ? solicitacoesPendentes : 0; }
-    public Duration getTotalDoDia() { return totalDoDia; }
-    public void setTotalDoDia(Duration totalDoDia) { this.totalDoDia = totalDoDia != null ? totalDoDia : Duration.ZERO; }
-    public Integer getTotalPontoHoje() { return totalPontoHoje; }
-    public void setTotalPontoHoje(Integer totalPontoHoje) { this.totalPontoHoje = totalPontoHoje != null ? totalPontoHoje : 0; }
 
     @Override
     public boolean equals(Object o) {

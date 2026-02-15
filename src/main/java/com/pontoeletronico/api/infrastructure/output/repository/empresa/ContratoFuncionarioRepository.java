@@ -14,8 +14,6 @@ import java.util.UUID;
 
 public interface ContratoFuncionarioRepository extends JpaRepository<ContratoFuncionario, UUID> {
 
-    Optional<ContratoFuncionario> findByFuncionarioId(UUID funcionarioId);
-
     @Query(value = "SELECT 1 FROM contrato_funcionario WHERE matricula = :matricula AND matricula IS NOT NULL LIMIT 1", nativeQuery = true)
     Optional<Integer> existsByMatricula(@Param("matricula") String matricula);
 

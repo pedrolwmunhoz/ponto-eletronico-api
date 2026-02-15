@@ -18,8 +18,6 @@ public interface EmpresaDadosFiscalRepository extends JpaRepository<EmpresaDados
     @Query(value = "SELECT 1 FROM empresa_dados_fiscal WHERE empresa_id = :empresaId LIMIT 1", nativeQuery = true)
     Optional<Integer> existsByEmpresaId(@Param("empresaId") UUID empresaId);
 
-    Optional<EmpresaDadosFiscal> findByEmpresaId(UUID empresaId);
-
     @Modifying
     @Query(value = """
             INSERT INTO empresa_dados_fiscal (id, empresa_id, razao_social, cnpj, updated_at)

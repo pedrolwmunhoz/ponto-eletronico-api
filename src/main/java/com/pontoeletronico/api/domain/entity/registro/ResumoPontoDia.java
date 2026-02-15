@@ -4,14 +4,12 @@ import com.pontoeletronico.api.config.DurationStringConverter;
 import jakarta.persistence.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "resumo_ponto_dia")
 public class ResumoPontoDia {
 
@@ -34,6 +32,10 @@ public class ResumoPontoDia {
     @Convert(converter = DurationStringConverter.class)
     @Column(name = "total_horas_trabalhadas", nullable = false, length = 20)
     private Duration totalHorasTrabalhadas = Duration.ZERO;
+
+    @Convert(converter = DurationStringConverter.class)
+    @Column(name = "total_horas_trabalhadas_feriado", nullable = false, length = 20)
+    private Duration totalHorasTrabalhadasFeriado = Duration.ZERO;
 
     @Convert(converter = DurationStringConverter.class)
     @Column(name = "total_horas_esperadas", nullable = false, length = 20)

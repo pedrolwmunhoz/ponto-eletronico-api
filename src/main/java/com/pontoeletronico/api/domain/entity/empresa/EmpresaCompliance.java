@@ -1,11 +1,14 @@
 package com.pontoeletronico.api.domain.entity.empresa;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Data;
+import java.time.LocalDateTime;
+
 @Entity
+@Data
 @Table(name = "empresa_compliance")
 public class EmpresaCompliance {
 
@@ -32,24 +35,8 @@ public class EmpresaCompliance {
     private Boolean assinaturaDigitalObrigatoria = true;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
-    public Boolean getControlePontoObrigatorio() { return controlePontoObrigatorio; }
-    public void setControlePontoObrigatorio(Boolean controlePontoObrigatorio) { this.controlePontoObrigatorio = controlePontoObrigatorio; }
-    public Integer getTipoModeloPontoId() { return tipoModeloPontoId; }
-    public void setTipoModeloPontoId(Integer tipoModeloPontoId) { this.tipoModeloPontoId = tipoModeloPontoId; }
-    public Integer getTempoRetencaoAnos() { return tempoRetencaoAnos; }
-    public void setTempoRetencaoAnos(Integer tempoRetencaoAnos) { this.tempoRetencaoAnos = tempoRetencaoAnos; }
-    public Boolean getAuditoriaAtiva() { return auditoriaAtiva; }
-    public void setAuditoriaAtiva(Boolean auditoriaAtiva) { this.auditoriaAtiva = auditoriaAtiva; }
-    public Boolean getAssinaturaDigitalObrigatoria() { return assinaturaDigitalObrigatoria; }
-    public void setAssinaturaDigitalObrigatoria(Boolean assinaturaDigitalObrigatoria) { this.assinaturaDigitalObrigatoria = assinaturaDigitalObrigatoria; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 
     @Override
     public boolean equals(Object o) {

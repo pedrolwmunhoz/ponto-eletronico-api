@@ -116,7 +116,7 @@ public class FuncionarioRegistroPontoService {
         if (val == null) return null;
         if (val instanceof LocalDate d) return d;
         if (val instanceof java.sql.Date d) return d.toLocalDate();
-        if (val instanceof java.util.Date d) return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        if (val instanceof java.util.Date d) return new java.sql.Timestamp(d.getTime()).toLocalDateTime().toLocalDate();
         return LocalDate.parse(val.toString());
     }
 
@@ -141,11 +141,16 @@ public class FuncionarioRegistroPontoService {
             throw new BadRequestException("horario e justificativa são obrigatórios");
         }
 
+        Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(funcionarioId, request.horario());
+        if (registroPontoOptional.isPresent()) {
+            throw new BadRequestException("Registro de ponto já existe");
+        }
+
         var empresaId = identificacaoFuncionarioRepository.findEmpresaIdByFuncionarioIdAndAtivoTrue(funcionarioId)
                 .orElseThrow(() -> new RegistroNaoEncontradoException("Funcionário não encontrado"));
         var jornadaConfig = registroPontoValidacaoService.validar(empresaId, funcionarioId, request.registroMetadados());
 
-        var registroPonto = registroPontoRepository.findByIdempotencyKeyAndUsuarioIdAndAtivoTrue(idempotencyKey, funcionarioId).orElse(null);
+        var registroPonto = registroPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).orElse(null);
         var solicitacaoPonto = solicitacaoPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).orElse(null);
         if (registroPonto != null || solicitacaoPonto != null) {
             return;
@@ -161,8 +166,16 @@ public class FuncionarioRegistroPontoService {
             var idNovoRegistro = UUID.randomUUID();
             var diaSemana = DIA_SEMANA.get(dataRegistroManual.getDayOfWeek());
 
-            registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_MANUAL, descricao, dataRegistroManual);
-            var novoRegistro = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
+            RegistroPonto novoRegistro = new RegistroPonto();
+            novoRegistro.setId(idNovoRegistro);
+            novoRegistro.setIdempotencyKey(idempotencyKey);
+            novoRegistro.setUsuarioId(funcionarioId);
+            novoRegistro.setDiaSemana(diaSemana);
+            novoRegistro.setDispositivoId(dispositivoId);
+            novoRegistro.setTipoMarcacaoId(TIPO_MARCACAO_MANUAL);
+            novoRegistro.setDescricao(descricao);
+            novoRegistro.setCreatedAt(dataRegistroManual);
+            registroPontoRepository.save(novoRegistro);
             calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, novoRegistro, jornadaConfig);
         } else {
             var tipoJustificativaId = tipoJustificativaRepository.findIdByDescricao(request.justificativa());
@@ -185,9 +198,13 @@ public class FuncionarioRegistroPontoService {
         }
         
         var funcionarioId = identificacaoFuncionarioRepository.findFuncionarioIdByEmpresaIdAndCodigoPontoAndAtivoTrue(empresaId, request.codigoPonto())
-                .orElseThrow(() -> new FuncionarioNaoEncontradoException());
-
-        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioIdAndAtivoTrue(idempotencyKey, funcionarioId).isPresent()) {
+        .orElseThrow(() -> new FuncionarioNaoEncontradoException());
+        
+        Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(funcionarioId, dataNovoRegistro);
+        if (registroPontoOptional.isPresent()) {
+            throw new BadRequestException("Registro de ponto já existe");
+        }
+        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).isPresent()) {
             return;
         }
 
@@ -211,8 +228,13 @@ public class FuncionarioRegistroPontoService {
         if (idempotencyKey == null) {
             throw new BadRequestException("Idempotency-Key obrigatório");
         }
-        if (registroPontoRepository.findByIdAndUsuarioIdAndAtivoTrue(idempotencyKey, funcionarioId).isPresent()) {
+        if (registroPontoRepository.findByIdAndUsuarioId(idempotencyKey, funcionarioId).isPresent()) {
             return;
+        }
+
+        Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(funcionarioId, dataNovoRegistro);
+        if (registroPontoOptional.isPresent()) {
+            throw new BadRequestException("Registro de ponto já existe");
         }
 
         lockRegistroPontoService.adquirirLock(funcionarioId);
@@ -244,12 +266,12 @@ public class FuncionarioRegistroPontoService {
         
         if (Boolean.TRUE.equals(jornadaConfig.permiteAjustePonto())) {
             lockRegistroPontoService.adquirirLock(funcionarioId);
+            calcularBancoHorasSoftDeleteService.processarSoftDelete(funcionarioId, identificacao.getEmpresaId(), idRegistro, registroPonto.getCreatedAt(), jornadaConfig);
 
-            var rows = registroPontoRepository.desativar(idRegistro, funcionarioId);
+            var rows = registroPontoRepository.deleteByIdAndUsuarioId(idRegistro, funcionarioId);
             if (rows == 0) {
                 throw new RegistroNaoEncontradoException("Registro de ponto não encontrado");
             }
-            calcularBancoHorasSoftDeleteService.processarSoftDelete(funcionarioId, identificacao.getEmpresaId(), idRegistro, registroPonto.getCreatedAt(), jornadaConfig);
         } else {
             var tipoJustificativaId = tipoJustificativaRepository.findIdByDescricao(MOTIVO_OUTROS);
             if (tipoJustificativaId == null) {

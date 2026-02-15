@@ -1,8 +1,10 @@
 package com.pontoeletronico.api.domain.entity.usuario;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 @Entity
+@Data
 @Table(name = "tipo_usuario")
 public class TipoUsuario {
 
@@ -16,27 +18,4 @@ public class TipoUsuario {
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-
-    public Boolean getAtivo() {
-        return ativo;
-    }
-
-    public void setAtivo(Boolean ativo) {
-        this.ativo = ativo;
-    }
 }

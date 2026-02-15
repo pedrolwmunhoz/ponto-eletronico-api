@@ -1,7 +1,6 @@
 package com.pontoeletronico.api.domain.entity.empresa;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import lombok.Data;
 import java.util.Objects;

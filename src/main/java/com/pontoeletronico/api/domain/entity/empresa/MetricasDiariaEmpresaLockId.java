@@ -5,22 +5,19 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class MetricasDiariaEmpresaLockId implements Serializable {
 
     private UUID empresaId;
     private LocalDate dataRef;
-
-    public MetricasDiariaEmpresaLockId() {}
-
-    public MetricasDiariaEmpresaLockId(UUID empresaId, LocalDate dataRef) {
-        this.empresaId = empresaId;
-        this.dataRef = dataRef;
-    }
-
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
-    public LocalDate getDataRef() { return dataRef; }
-    public void setDataRef(LocalDate dataRef) { this.dataRef = dataRef; }
 
     @Override
     public boolean equals(Object o) {

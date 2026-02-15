@@ -1,10 +1,7 @@
 package com.pontoeletronico.api.domain.entity.registro;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import java.util.Objects;
 import java.util.UUID;
 import java.time.LocalDateTime;
@@ -13,10 +10,7 @@ import java.time.LocalDateTime;
  * Vínculo entre registro_ponto e resumo_ponto_dia (jornada).
  */
 @Entity
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
+@Data
 @Table(name = "xref_ponto_resumo", uniqueConstraints = @UniqueConstraint(columnNames = {"registro_ponto_id"}))
 public class XrefPontoResumo {
 

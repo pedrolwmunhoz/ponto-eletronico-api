@@ -6,14 +6,20 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AfastamentoRepository extends JpaRepository<Afastamento, UUID> {
 
-    List<Afastamento> findByFuncionarioIdOrderByDataInicioDesc(UUID funcionarioId);
+
+    @Query(value = """
+            SELECT * FROM afastamento WHERE funcionario_id = :funcionarioId AND data_inicio <= :dataFim AND data_fim >= :dataInicio
+            ORDER BY data_inicio ASC
+            """, nativeQuery = true)
+    List<Afastamento> findByFuncionarioIdAndDataBetween(UUID funcionarioId, LocalDateTime dataInicio, LocalDateTime dataFim);
 
     @Modifying
     @Query(value = """
@@ -22,5 +28,5 @@ public interface AfastamentoRepository extends JpaRepository<Afastamento, UUID> 
             """, nativeQuery = true)
     void insert(@Param("id") UUID id, @Param("funcionarioId") UUID funcionarioId, @Param("tipoAfastamentoId") Integer tipoAfastamentoId,
                 @Param("dataInicio") LocalDate dataInicio, @Param("dataFim") LocalDate dataFim, @Param("observacao") String observacao,
-                @Param("ativo") boolean ativo, @Param("createdAt") Instant createdAt, @Param("updatedAt") Instant updatedAt);
+                @Param("ativo") boolean ativo, @Param("createdAt") LocalDateTime createdAt, @Param("updatedAt") LocalDateTime updatedAt);
 }

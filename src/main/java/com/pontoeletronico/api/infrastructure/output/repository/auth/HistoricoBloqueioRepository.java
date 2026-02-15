@@ -7,20 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface HistoricoBloqueioRepository extends JpaRepository<HistoricoBloqueio, UUID> {
-
-    @Query(value = """
-            SELECT *
-            FROM historico_bloqueio
-            WHERE usuario_id = :usuarioId
-              AND ativo = true
-              AND data_bloqueio IS NOT NULL
-            LIMIT 1
-            """, nativeQuery = true)
-    Optional<HistoricoBloqueio> findBloqueioAtivoByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
     @Modifying
     @Query(value = """

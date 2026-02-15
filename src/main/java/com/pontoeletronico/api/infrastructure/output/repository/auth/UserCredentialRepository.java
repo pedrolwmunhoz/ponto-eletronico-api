@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,20 +76,4 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
             """, nativeQuery = true)
     int desativar(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId, @Param("dataDesativacao") LocalDateTime dataDesativacao);
 
-    @Query(value = """
-            SELECT uc.valor
-            FROM user_credential uc
-
-            INNER JOIN tipo_credential tc
-                    ON tc.id = uc.tipo_credencial_id AND tc.descricao = 'EMAIL'
-
-            INNER JOIN tipo_categoria_credential tcc
-                    ON tcc.id = uc.categoria_credential_id AND tcc.descricao = 'PRIMARIO'
-
-            WHERE uc.usuario_id = :usuarioId
-              AND uc.ativo = true
-              AND uc.data_desativacao IS NULL
-            LIMIT 1
-            """, nativeQuery = true)
-    Optional<String> findEmailPrimarioByUsuarioId(@Param("usuarioId") UUID usuarioId);
 }

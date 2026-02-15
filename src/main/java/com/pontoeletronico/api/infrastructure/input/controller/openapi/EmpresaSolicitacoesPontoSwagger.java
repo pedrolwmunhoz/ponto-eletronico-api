@@ -27,7 +27,7 @@ public interface EmpresaSolicitacoesPontoSwagger {
     })
     ResponseEntity<List<PontoListagemResponse>> listarPonto(@PathVariable("funcionarioId") UUID funcionarioId, @RequestParam int ano, @RequestParam int mes, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
-    @Operation(summary = "Deletar registro de ponto", description = "Deletar registro de ponto de um funcionário. usuarioId da empresa extraído do token JWT. Empresa só tem acesso aos funcionários dela mesma. Soft delete (ativo=false).", tags = {"Empresa (solicitações de ponto)"})
+    @Operation(summary = "Deletar registro de ponto", description = "Deletar registro de ponto de um funcionário. usuarioId da empresa extraído do token JWT. Empresa só tem acesso aos funcionários dela mesma. Exclusão física (DELETE).", tags = {"Empresa (solicitações de ponto)"})
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "No Content"),
             @ApiResponse(responseCode = "401", description = "Não autorizado"),
@@ -36,7 +36,7 @@ public interface EmpresaSolicitacoesPontoSwagger {
     })
     ResponseEntity<Void> deletarRegistro(@PathVariable("funcionarioId") UUID funcionarioId, @PathVariable("registroId") UUID registroId, @RequestHeader("Authorization") String authorization);
 
-    @Operation(summary = "Editar registro de ponto", description = "Desativa o registro antigo, cria um novo com os dados enviados e dispara recálculo de banco de horas.", tags = {"Empresa (solicitações de ponto)"})
+    @Operation(summary = "Editar registro de ponto", description = "Exclui o registro antigo (DELETE), cria um novo com os dados enviados e dispara recálculo de banco de horas.", tags = {"Empresa (solicitações de ponto)"})
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "OK"),
             @ApiResponse(responseCode = "400", description = "Bad Request"),

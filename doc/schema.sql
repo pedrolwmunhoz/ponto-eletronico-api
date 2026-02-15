@@ -4,7 +4,7 @@
 -- Ordem respeitando dependências de Foreign Keys
 -- ============================================================================
 -- DATAS: Todas as colunas de data/hora são TIMESTAMP (sem time zone) = LocalDateTime.
---       Não usar TIMESTAMPTZ. Não usar Instant (timezone) no mapeamento.
+--       Não usar TIMESTAMPTZ. Mapear como LocalDateTime.
 -- ============================================================================
 
 -- UUID: usar gen_random_uuid() (built-in desde PostgreSQL 13). Se estiver em versão antiga, descomente abaixo:
@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS tipo_status_pagamento (
     ativo           BOOLEAN NOT NULL DEFAULT true
 );
 
+-- 17. tipo_feriado (NACIONAL | ESTADUAL | MUNICIPAL - abrangência do feriado)
+CREATE TABLE IF NOT EXISTS tipo_feriado (
+    id              SERIAL PRIMARY KEY,
+    descricao       VARCHAR(50) NOT NULL UNIQUE,
+    ativo           BOOLEAN NOT NULL DEFAULT true
+);
+
 -- ============================================================================
 -- DADOS INICIAIS - Tipos/Catálogos (Seed Data)
 -- INSERT com WHERE NOT EXISTS = idempotente, funciona sem UNIQUE(descricao)
@@ -205,6 +212,10 @@ WHERE NOT EXISTS (SELECT 1 FROM tipo_categoria_credential WHERE descricao = t.x)
 INSERT INTO tipo_status_pagamento (descricao)
 SELECT x FROM (VALUES ('PENDENTE'), ('PARCIAL'), ('PAGO')) AS t(x)
 WHERE NOT EXISTS (SELECT 1 FROM tipo_status_pagamento WHERE descricao = t.x);
+
+INSERT INTO tipo_feriado (descricao)
+SELECT x FROM (VALUES ('NACIONAL'), ('ESTADUAL'), ('MUNICIPAL')) AS t(x)
+WHERE NOT EXISTS (SELECT 1 FROM tipo_feriado WHERE descricao = t.x);
 
 -- ============================================================================
 -- USERS - Entidade base
@@ -545,8 +556,8 @@ CREATE TABLE IF NOT EXISTS registro_ponto (
     tipo_marcacao_id INTEGER NOT NULL REFERENCES tipo_marcacao(id),
     tipo_entrada    BOOLEAN NOT NULL DEFAULT true,
     descricao       TEXT NULL,
-    ativo           BOOLEAN NOT NULL DEFAULT true,
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(usuario_id, created_at)
 );
 
 CREATE INDEX IF NOT EXISTS idx_registro_ponto_usuario_created ON registro_ponto(usuario_id, created_at);
@@ -585,7 +596,8 @@ CREATE TABLE IF NOT EXISTS xref_ponto_resumo (
     funcionario_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     registro_ponto_id   UUID NOT NULL UNIQUE REFERENCES registro_ponto(id) ON DELETE CASCADE,
     resumo_ponto_dia_id UUID NOT NULL REFERENCES resumo_ponto_dia(id) ON DELETE CASCADE,
-    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(funcionario_id, created_at)
 );
 
 CREATE INDEX IF NOT EXISTS idx_xref_ponto_resumo_resumo_id ON xref_ponto_resumo(resumo_ponto_dia_id);
@@ -608,7 +620,7 @@ CREATE TABLE IF NOT EXISTS registro_metadados (
 -- tipo_solicitacao_id: 1=CRIAR (usa data_hora_registro), 2=REMOVER (usa registro_ponto_id)
 -- empresa_aprovacao_id = empresa (users.id da empresa) que aprovou
 -- idempotency_key: evita duplicidade ao criar solicitação (header Idempotency-Key).
--- Datas: TIMESTAMP = LocalDateTime (não usar timestamptz/Instant)
+-- Datas: TIMESTAMP = LocalDateTime (não usar timestamptz)
 CREATE TABLE IF NOT EXISTS solicitacao_ponto (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     idempotency_key         UUID NOT NULL UNIQUE,
@@ -690,6 +702,7 @@ CREATE TABLE IF NOT EXISTS banco_horas_mensal (
     ano_ref                     INTEGER NOT NULL,
     total_horas_esperadas       VARCHAR(20) NOT NULL DEFAULT 'PT0S',
     total_horas_trabalhadas     VARCHAR(20) NOT NULL DEFAULT 'PT0S',
+    total_horas_trabalhadas_feriado VARCHAR(20) NOT NULL DEFAULT 'PT0S',
     inconsistente               BOOLEAN NOT NULL DEFAULT false,
     motivo_inconsistencia       VARCHAR(255) NULL,
     ativo                       BOOLEAN NOT NULL DEFAULT true,
@@ -718,10 +731,31 @@ CREATE INDEX IF NOT EXISTS idx_afastamento_funcionario_inicio ON afastamento(fun
 CREATE INDEX IF NOT EXISTS idx_afastamento_ativo_inicio ON afastamento(ativo, data_inicio);
 
 -- ============================================================================
+-- FERIADOS (Nacional, Estadual, Municipal)
+-- ============================================================================
+
+-- 51. feriado
+-- empresa_id NULL = feriado de abrangência (tipo); preenchido = feriado específico da empresa.
+-- tipo_usuario_id: opcional, para restringir feriado a um tipo de usuário (ex.: só EMPRESA).
+CREATE TABLE IF NOT EXISTS feriado (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data                DATE NOT NULL,
+    descricao           VARCHAR(255) NOT NULL,
+    tipo_feriado_id     INTEGER NOT NULL REFERENCES tipo_feriado(id),
+    tipo_usuario_id     INTEGER NULL REFERENCES tipo_usuario(id),
+    empresa_id          UUID NULL REFERENCES users(id) ON DELETE CASCADE,
+    ativo               BOOLEAN NOT NULL DEFAULT true,
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_feriado_data ON feriado(data);
+CREATE INDEX IF NOT EXISTS idx_feriado_empresa_data ON feriado(empresa_id, data);
+
+-- ============================================================================
 -- AUDITORIA
 -- ============================================================================
 
--- 51. auditoria_log
+-- 52. auditoria_log
 CREATE TABLE IF NOT EXISTS auditoria_log (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -745,7 +779,7 @@ CREATE INDEX IF NOT EXISTS idx_auditoria_log_acao_created ON auditoria_log(acao,
 -- NOTIFICAÇÕES
 -- ============================================================================
 
--- 52. notificacao
+-- 53. notificacao
 CREATE TABLE IF NOT EXISTS notificacao (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

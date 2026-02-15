@@ -9,10 +9,9 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
 
 import com.pontoeletronico.api.domain.entity.registro.ResumoPontoDia;
-import com.pontoeletronico.api.domain.entity.registro.XrefPontoResumo;
 import com.pontoeletronico.api.domain.entity.registro.RegistroPonto;
 import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
@@ -21,23 +20,25 @@ import com.pontoeletronico.api.infrastructure.output.repository.registro.Registr
 import com.pontoeletronico.api.infrastructure.output.repository.registro.XrefPontoResumoRepository;
 
 @Service
-@Data
+@AllArgsConstructor
 public class CalcularHorasMetricasService {
 
     private final ResumoPontoDiaRepository resumoPontoDiaRepository;
     private final RegistroPontoRepository registroPontoRepository;
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
     private final BancoHorasMensalService calcularBancoHorasMensal;
+    private final CalcularResumoDiaUtils calcularResumoDiaUtils;
+    
     public void calcularHorasAposEntradaManual(UUID empresaId, RegistroPonto registroPonto, JornadaConfig jornadaConfig) {
          
         var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
-        LocalDateTime dataAtualInicio = registroPonto.getCreatedAt().minus(01, ChronoUnit.MILLIS);
-        LocalDateTime dataAtualFim = registroPonto.getCreatedAt().plus(01, ChronoUnit.MILLIS);
+        LocalDateTime dataAtualInicio = registroPonto.getCreatedAt();
+        LocalDateTime dataAtualFim = registroPonto.getCreatedAt();
         
-        LocalDateTime inicioRangeJornada = dataAtualInicio.minus(tempoDescansoEntreJornada);
-        LocalDateTime fimRangeJornada = dataAtualFim.plus(tempoDescansoEntreJornada);
+        LocalDateTime inicioRangeJornada = dataAtualInicio.minus(tempoDescansoEntreJornada).plus(1, ChronoUnit.MILLIS);
+        LocalDateTime fimRangeJornada = dataAtualFim.plus(tempoDescansoEntreJornada).minus(1, ChronoUnit.MILLIS);
         
-        Optional<ResumoPontoDia> jornadaAfetadaDataAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenDesc(registroPonto.getUsuarioId(), inicioRangeJornada, dataAtualInicio);
+        Optional<ResumoPontoDia> jornadaAfetadaDataAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(registroPonto.getUsuarioId(), inicioRangeJornada, dataAtualInicio);
         Optional<ResumoPontoDia> jornadaAfetadaDataPosterior = null;
 
         UUID jornadaAfetadaId = null;
@@ -67,11 +68,12 @@ public class CalcularHorasMetricasService {
         
         var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
         List<RegistroPonto> listaRegistrosJornadaAfetada = xrefPontoResumoRepository
-        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId(), "asc");
+        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId());
         
         listaRegistrosJornadaAfetada.add(novoRegistro);
         recalcularJornadaAfetada(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig); 
-
+        salvarXrefPontoResumo(novoRegistro.getUsuarioId(), jornadaAfetada.getId(), novoRegistro.getId(), novoRegistro.getCreatedAt());
+        
         LocalDateTime inicioJornadaAfetada = jornadaAfetada.getPrimeiraBatida().minus(1, ChronoUnit.MILLIS);
         LocalDateTime fimJornadaAfetada = jornadaAfetada.getUltimaBatida().plus(1, ChronoUnit.MILLIS);
 
@@ -83,6 +85,7 @@ public class CalcularHorasMetricasService {
 
         Optional<ResumoPontoDia> jornadaAfetadaPosterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(
                 novoRegistro.getUsuarioId(), fimJornadaAfetada, fimRangeJornadaAfetada);
+        
         if (jornadaAfetadaAnterior.isPresent()) {
             // pega o primeira batida da jornadaAfetada e compara com a ultima batida da jornada anterior usando Duration
             
@@ -94,7 +97,6 @@ public class CalcularHorasMetricasService {
                 if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
                     // juntar lista de registros da jornada anterior e jornada afetada
                     juntarJornadas(jornadaAfetada, jornadaAnterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                
                 }
             }
         }
@@ -107,7 +109,6 @@ public class CalcularHorasMetricasService {
                 if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
                     // juntar lista de registros da jornada anterior e jornada afetada
                     juntarJornadas(jornadaAfetada, jornadaPosterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                
                 }
             }
         }
@@ -115,7 +116,7 @@ public class CalcularHorasMetricasService {
 
     private void juntarJornadas(ResumoPontoDia jornadaAfetada, ResumoPontoDia jornadaAdd, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig) {
         List<RegistroPonto> listaRegistrosJornadaAdd = xrefPontoResumoRepository
-        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAdd.getId(), "asc");
+        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAdd.getId());
 
         listaRegistrosJornadaAfetada.addAll(listaRegistrosJornadaAdd);
         apagarJornadaAndXref(jornadaAdd.getId());
@@ -125,7 +126,7 @@ public class CalcularHorasMetricasService {
     }
 
     private void recalcularJornadaAfetada(ResumoPontoDia jornadaAfetada, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig) {
-        CalcularResumoDiaUtils.recalcularResumoDoDia(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
+        calcularResumoDiaUtils.recalcularResumoDoDia(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
         reordenarTipos(listaRegistrosJornadaAfetada);
         salvarJornadaAfetada(jornadaAfetada);
     }
@@ -144,13 +145,8 @@ public class CalcularHorasMetricasService {
         if (xrefPontoResumoRepository.existsByRegistroPontoId(idRegistroPonto)) {
             return;
         }
-        var xref = new XrefPontoResumo();
-        xref.setId(UUID.randomUUID());
-        xref.setFuncionarioId(funcionarioId);
-        xref.setRegistroPontoId(idRegistroPonto);
-        xref.setResumoPontoDiaId(idJornada);
-        xref.setCreatedAt(dataRegistro);
-        xrefPontoResumoRepository.save(xref);
+        var novoIdXref = UUID.randomUUID();
+        xrefPontoResumoRepository.insert(novoIdXref, funcionarioId, idRegistroPonto, idJornada, dataRegistro);
     }
 
     private void salvarRegistroPonto(RegistroPonto registro) {

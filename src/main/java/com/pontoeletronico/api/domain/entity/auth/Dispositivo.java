@@ -1,10 +1,12 @@
 package com.pontoeletronico.api.domain.entity.auth;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@Data
 @Table(name = "dispositivo")
 public class Dispositivo {
 
@@ -33,69 +35,6 @@ public class Dispositivo {
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getUsuarioId() {
-        return usuarioId;
-    }
-
-    public void setUsuarioId(UUID usuarioId) {
-        this.usuarioId = usuarioId;
-    }
-
-    public String getNomeDispositivo() {
-        return nomeDispositivo;
-    }
-
-    public void setNomeDispositivo(String nomeDispositivo) {
-        this.nomeDispositivo = nomeDispositivo;
-    }
-
-    public String getSistemaOperacional() {
-        return sistemaOperacional;
-    }
-
-    public void setSistemaOperacional(String sistemaOperacional) {
-        this.sistemaOperacional = sistemaOperacional;
-    }
-
-    public String getVersaoApp() {
-        return versaoApp;
-    }
-
-    public void setVersaoApp(String versaoApp) {
-        this.versaoApp = versaoApp;
-    }
-
-    public String getModeloDispositivo() {
-        return modeloDispositivo;
-    }
-
-    public void setModeloDispositivo(String modeloDispositivo) {
-        this.modeloDispositivo = modeloDispositivo;
-    }
-
-    public String getIpAddress() {
-        return ipAddress;
-    }
-
-    public void setIpAddress(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
-
-    public String getUserAgent() {
-        return userAgent;
-    }
-
-    public void setUserAgent(String userAgent) {
-        this.userAgent = userAgent;
-    }
 
     @Override
     public boolean equals(Object o) {

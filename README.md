@@ -64,7 +64,7 @@ O script em `doc/schema.sql`:
 - Insere dados iniciais (seeds) idempotentes.
 - Cria tabelas de negócio: `users`, `identificacao_funcionario`, `empresa_*`, `registro_ponto`, `resumo_ponto_dia`, `xref_ponto_resumo`, `solicitacao_ponto`, `banco_horas_*`, `auditoria_log`, etc.
 
-**Importante:** Todas as colunas de data/hora no schema são **TIMESTAMP (sem time zone)** e devem ser mapeadas como `LocalDateTime` na aplicação. Não usar `TIMESTAMPTZ` nem `Instant` no mapeamento.
+**Importante:** Todas as colunas de data/hora no schema são **TIMESTAMP (sem time zone)** e devem ser mapeadas como `LocalDateTime` na aplicação. Não usar `TIMESTAMPTZ` no mapeamento.
 
 ### 2. Chaves JWT
 

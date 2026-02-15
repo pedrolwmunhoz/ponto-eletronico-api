@@ -14,8 +14,6 @@ public interface MetricasDiariaEmpresaRepository extends JpaRepository<MetricasD
 
     Optional<MetricasDiariaEmpresa> findByEmpresaIdAndDataRef(UUID empresaId, LocalDate dataRef);
 
-    List<MetricasDiariaEmpresa> findByEmpresaIdAndAnoRefAndMesRef(UUID empresaId, Integer anoRef, Integer mesRef);
-
     Optional<MetricasDiariaEmpresa> findTopByEmpresaIdAndDataRefBeforeOrderByDataRefDesc(UUID empresaId, LocalDate dataRef);
 
     Optional<MetricasDiariaEmpresa> findTopByEmpresaIdOrderByDataRefDesc(UUID empresaId);

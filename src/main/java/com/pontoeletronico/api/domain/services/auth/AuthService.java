@@ -69,35 +69,35 @@ public class AuthService {
                 .orElseThrow(CredencialInvalidaException::new);
 
         if (Boolean.TRUE.equals(credencial.getBloqueio())) {
-            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.USUARIO_BLOQUEADO.getMensagem(), dataReferencia).join();
+            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.USUARIO_BLOQUEADO.getMensagem(), dataReferencia);
             throw new UsuarioBloqueadoException();
         }
 
         var desde = dataReferencia.minusMinutes(janelaMinutos);
         if (credencial.getBloqueio().equals(true)) {
-            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.TENTATIVAS_EXCEDIDAS.getMensagem(), dataReferencia).join();
+            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.TENTATIVAS_EXCEDIDAS.getMensagem(), dataReferencia);
             throw new TentativasExcedidasException();
         }
 
         if (!passwordEncoder.matches(request.senha(), credencial.getSenhaHash())) {
-            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.CREDENCIAL_INVALIDA.getMensagem(), dataReferencia).join();
+            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.CREDENCIAL_INVALIDA.getMensagem(), dataReferencia);
             var quantidadeFalhasRecentes = historicoLoginRepository.countFalhasRecentes(credencial.getCredencialId(), desde);
             if (quantidadeFalhasRecentes >= maxTentativas && !credencial.getBloqueio().equals(true)) {
                 historicoBloqueioRegistroService.registrarBloqueioBruteForce(
                         credencial.getUsuarioId(), dataReferencia, MensagemErro.TENTATIVAS_EXCEDIDAS.getMensagem(), dataReferencia);
-                loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.TENTATIVAS_EXCEDIDAS.getMensagem(), dataReferencia).join();
+                loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.TENTATIVAS_EXCEDIDAS.getMensagem(), dataReferencia);
                 throw new TentativasExcedidasException();
             }
             throw new CredencialInvalidaException();
         }
 
         if (!Boolean.TRUE.equals(credencial.getAtivo())) {
-            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, "Usuário inativo", dataReferencia).join();
+            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, "Usuário inativo", dataReferencia);
             throw new UsuarioInativoException();
         }
 
         if (Boolean.TRUE.equals(credencial.getSenhaExpirada())) {
-            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.SENHA_EXPIRADA.getMensagem(), dataReferencia).join();
+            loginRegistroAsyncService.registrar(credencial, httpRequest, null, null, false, MensagemErro.SENHA_EXPIRADA.getMensagem(), dataReferencia);
             throw new SenhaExpiradaException();
         }
 
@@ -108,14 +108,14 @@ public class AuthService {
         var refreshToken = UUID.randomUUID().toString().replace("-", "") + Base64.getEncoder().encodeToString(
                 (credencial.getUsuarioId() + ":" + Instant.now().plusSeconds(refreshExpirationMs).toEpochMilli()).getBytes(StandardCharsets.UTF_8));
 
-        loginRegistroAsyncService.registrar(credencial, httpRequest, refreshToken, refreshExpiresAt, true, null, dataReferencia).join();
+        loginRegistroAsyncService.registrar(credencial, httpRequest, refreshToken, refreshExpiresAt, true, null, dataReferencia);
 
-        var formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+        var formatter = DateTimeFormatter.ISO_INSTANT;
         return new LoginResponse(
                 jwt,
-                formatter.format(jwtExpiresAt.atZone(java.time.ZoneId.of("America/Sao_Paulo"))),
+                formatter.format(jwtExpiresAt),
                 refreshToken,
-                formatter.format(refreshExpiresAt.atZone(java.time.ZoneId.of("America/Sao_Paulo")))
+                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(refreshExpiresAt)
         );
     }
 

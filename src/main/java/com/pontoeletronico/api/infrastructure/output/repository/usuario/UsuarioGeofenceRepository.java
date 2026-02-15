@@ -14,8 +14,6 @@ import java.util.UUID;
 
 public interface UsuarioGeofenceRepository extends JpaRepository<UsuarioGeofence, UUID> {
 
-    List<UsuarioGeofence> findByUsuarioIdOrderByCreatedAtDesc(UUID usuarioId);
-
     @Query(value = """
             SELECT * FROM usuario_geofence
             WHERE usuario_id = :usuarioId
@@ -52,20 +50,4 @@ public interface UsuarioGeofenceRepository extends JpaRepository<UsuarioGeofence
             LIMIT 1
             """, nativeQuery = true)
     Optional<Integer> existsFuncionarioDentroDeGeofence(@Param("funcionarioId") UUID funcionarioId, @Param("lat") double lat, @Param("lon") double lon);
-
-    @Modifying
-    @Query(value = """
-            UPDATE usuario_geofence
-            SET descricao = :descricao,
-                latitude = :latitude,
-                longitude = :longitude,
-                raio_metros = :raioMetros,
-                ativo = :ativo,
-                updated_at = :updatedAt
-            WHERE id = (SELECT id FROM usuario_geofence WHERE usuario_id = :usuarioId LIMIT 1)
-            """, nativeQuery = true)
-    int updateGeofenceByUsuarioId(@Param("usuarioId") UUID usuarioId, @Param("descricao") String descricao,
-                          @Param("latitude") BigDecimal latitude, @Param("longitude") BigDecimal longitude,
-                          @Param("raioMetros") Integer raioMetros, @Param("ativo") boolean ativo,
-                          @Param("updatedAt") LocalDateTime updatedAt);
 }

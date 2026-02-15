@@ -1,7 +1,6 @@
 package com.pontoeletronico.api.domain.entity.auth;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import lombok.Data;
 import java.util.Objects;
@@ -26,7 +25,7 @@ public class UserPassword {
     private Boolean ativo = true;
 
     @Column(name = "data_expiracao")
-    private Instant dataExpiracao;
+    private LocalDateTime dataExpiracao;
 
     @Column(name = "data_desativacao")
     private LocalDateTime dataDesativacao;

@@ -1,16 +1,14 @@
 package com.pontoeletronico.api.domain.entity.registro;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "solicitacao_ponto")
 public class SolicitacaoPonto {
 

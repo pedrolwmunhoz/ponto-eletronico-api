@@ -13,7 +13,7 @@ import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoAfas
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,7 +74,7 @@ public class FeriasAfastamentosService {
         .orElseThrow( () -> new FuncionarioNaoPertenceEmpresaException()); 
         tipoAfastamentoRepository.findByIdAndAtivoTrue(request.tipoAfastamentoId())
                 .orElseThrow(() -> new RegistroNaoEncontradoException("Tipo de afastamento não encontrado ou inativo"));
-        var now = Instant.now();
+        var now = LocalDateTime.now();
         afastamentoRepository.insert(
                 UUID.randomUUID(),
                 funcionarioId,

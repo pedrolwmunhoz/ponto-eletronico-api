@@ -6,7 +6,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "contrato_funcionario")
 public class ContratoFuncionario {
 

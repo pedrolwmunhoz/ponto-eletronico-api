@@ -59,7 +59,7 @@ public interface FuncionarioRegistroPontoSwagger {
     })
     ResponseEntity<Void> registrarPontoFuncionario(@Valid @RequestBody RegistroPontoAppRequest request, @RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
-    @Operation(summary = "Deletar registro de ponto", description = "Deletar registro de ponto (funcionário). usuarioId (funcionário) extraído do token JWT. Soft delete (ativo=false).", tags = {"Registro-ponto (funcionário)"})
+    @Operation(summary = "Deletar registro de ponto", description = "Deletar registro de ponto (funcionário). usuarioId (funcionário) extraído do token JWT. Exclusão física (DELETE).", tags = {"Registro-ponto (funcionário)"})
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "No Content"),
             @ApiResponse(responseCode = "401", description = "Não autorizado"),

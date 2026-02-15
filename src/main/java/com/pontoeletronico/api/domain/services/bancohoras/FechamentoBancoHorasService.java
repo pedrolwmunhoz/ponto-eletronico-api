@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -96,7 +95,7 @@ public class FechamentoBancoHorasService {
     }
 
     private long calcularTotalHorasTrabalhadas(UUID funcionarioId, LocalDateTime inicioMes, LocalDateTime fimMes) {
-        var registros = registroPontoRepository.findByUsuarioIdAndAtivoTrueAndCreatedAtBetweenOrderByCreatedAtAsc(
+        var registros = registroPontoRepository.findByUsuarioIdAndCreatedAtBetweenOrderByCreatedAtAsc(
                 funcionarioId, inicioMes, fimMes);
         if (registros.isEmpty()) return 0;
         long totalMinutos = 0;

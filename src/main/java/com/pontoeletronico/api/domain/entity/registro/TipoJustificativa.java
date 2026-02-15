@@ -1,8 +1,10 @@
 package com.pontoeletronico.api.domain.entity.registro;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 @Entity
+@Data
 @Table(name = "tipo_justificativa")
 public class TipoJustificativa {
 
@@ -16,10 +18,4 @@ public class TipoJustificativa {
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getDescricao() { return descricao; }
-    public void setDescricao(String descricao) { this.descricao = descricao; }
-    public Boolean getAtivo() { return ativo; }
-    public void setAtivo(Boolean ativo) { this.ativo = ativo; }
 }

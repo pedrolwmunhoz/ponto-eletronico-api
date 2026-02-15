@@ -70,28 +70,26 @@ public class RefreshTokenService {
                 .orElseThrow(UsuarioNaoEncontradoException::new);
 
         var jwtExpiresAt = Instant.now().plusSeconds(jwtExpirationMs);
-        var refreshExpiresAt = Instant.now().plusSeconds(refreshExpirationMs);
-        
+        var refreshExpiresAt = LocalDateTime.now().plusSeconds(refreshExpirationMs);
+
         var scope = user.getTipoUsuarioId() != null && tipoUsuarioRepository.findDescricaoById(user.getTipoUsuarioId()) != null
                 ? tipoUsuarioRepository.findDescricaoById(user.getTipoUsuarioId()) : "BASIC";
         var jwt = gerarJwt(sessao.getUsuarioId().toString(), user.getUsername(), scope, jwtExpiresAt);
         var novoRefreshToken = UUID.randomUUID().toString().replace("-", "") + Base64.getEncoder()
-                .encodeToString((sessao.getUsuarioId() + ":" + refreshExpiresAt.toEpochMilli()).getBytes(StandardCharsets.UTF_8));
+                .encodeToString((sessao.getUsuarioId() + ":" + Instant.now().plusSeconds(refreshExpirationMs).toEpochMilli()).getBytes(StandardCharsets.UTF_8));
 
         sessaoAtivaRepository.desativarPorId(sessao.getId(), dataReferencia);
         sessaoAtivaRepository.insert(
                 UUID.randomUUID(), sessao.getUsuarioId(), sessao.getCredencialId(), novoRefreshToken,
-                sessao.getDispositivoId(), true, LocalDateTime.now().plusSeconds(refreshExpirationMs), null, dataReferencia);
+                sessao.getDispositivoId(), true, refreshExpiresAt, null, dataReferencia);
 
         registrarAuditoriaRefreshToken(sessao.getUsuarioId(), sessao.getDispositivoId(), true, null, dataReferencia, httpRequest);
 
-        var formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-        var zone = java.time.ZoneId.of("America/Sao_Paulo");
         return new RefreshResponse(
                 jwt,
-                formatter.format(jwtExpiresAt.atZone(zone)),
+                DateTimeFormatter.ISO_INSTANT.format(jwtExpiresAt),
                 novoRefreshToken,
-                formatter.format(refreshExpiresAt.atZone(zone))
+                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(refreshExpiresAt)
         );
     }
 

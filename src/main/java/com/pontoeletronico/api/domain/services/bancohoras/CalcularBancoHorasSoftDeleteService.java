@@ -10,7 +10,7 @@ import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoP
 import com.pontoeletronico.api.exception.RegistroNaoEncontradoException;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.XrefPontoResumoRepository;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Lógica separada - calcular banco horas após soft delete de registro.
@@ -28,12 +27,14 @@ import java.util.stream.Collectors;
  * Não impacta jornada anterior nem posterior, somente a jornadaAfetada.
  */
 @Service
-@Data
+@AllArgsConstructor
 public class CalcularBancoHorasSoftDeleteService {
 
     private final RegistroPontoRepository registroPontoRepository;
     private final ResumoPontoDiaRepository resumoPontoDiaRepository;
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
+    private final BancoHorasMensalService calcularBancoHorasMensal;
+    private final CalcularResumoDiaUtils calcularResumoDiaUtils;
 
 
     /**
@@ -47,13 +48,20 @@ public class CalcularBancoHorasSoftDeleteService {
         ResumoPontoDia jornadaAfetada = xrefPontoResumoRepository.findResumoPontoDiaByRegistroPontoId(idRegistroDeletado)
         .orElseThrow(() -> new RegistroNaoEncontradoException("Jornada não encontrada para o registro deletado"));
         
+        var listaRegistrosJornadaAfetada = xrefPontoResumoRepository
+        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId());
+        
+        if (listaRegistrosJornadaAfetada.size() == 1) {
+            apagarJornadaAndXref(jornadaAfetada.getId());
+            calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+            return;
+        }
+        
         // Remover xref do registro deletado
         xrefPontoResumoRepository.deleteByRegistroPontoId(idRegistroDeletado);
+        listaRegistrosJornadaAfetada.removeIf(reg -> reg.getId().equals(idRegistroDeletado));
 
         var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
-        var listaRegistrosJornadaAfetada = xrefPontoResumoRepository
-        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId(), "asc");
-
 
         // Pegar registro anterior por data
         Optional<RegistroPonto> registroAnterior = listaRegistrosJornadaAfetada.stream()
@@ -101,11 +109,11 @@ public class CalcularBancoHorasSoftDeleteService {
                 criarJornadaDividida(idNovaJornadaAfetadaPosterior, funcionarioId, empresaId, now, listaRegistrosJornadaAfetadaPosterior, jornadaConfig);
 
                 for (RegistroPonto registro : listaRegistrosJornadaAfetadaAnterior) {
-                    deleteXrefPontoResumo(registro.getId());
+                    xrefPontoResumoRepository.deleteByRegistroPontoId(registro.getId());
                     inserirXrefPontoResumo(funcionarioId, idNovaJornadaAfetadaAnterior, registro.getId(), registro.getCreatedAt());
                 }
                 for (RegistroPonto registro : listaRegistrosJornadaAfetadaPosterior) {
-                    deleteXrefPontoResumo(registro.getId());
+                    xrefPontoResumoRepository.deleteByRegistroPontoId(registro.getId());
                     inserirXrefPontoResumo(funcionarioId, idNovaJornadaAfetadaPosterior, registro.getId(), registro.getCreatedAt());
                 }
                 apagarJornadaAndXref(jornadaAfetada.getId());
@@ -116,11 +124,38 @@ public class CalcularBancoHorasSoftDeleteService {
         } else {
             // Se nao existir registro anterior e posterior, recalcular jornada afetada
             recalcularJornadaAfetada(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
-        } 
-    }
+        }
 
-    private void deleteXrefPontoResumo(UUID idRegistroPonto) {
-        xrefPontoResumoRepository.deleteByRegistroPontoId(idRegistroPonto);
+
+        var primeiraBatida = jornadaAfetada.getPrimeiraBatida();
+        var ultimaBatida = jornadaAfetada.getUltimaBatida();
+
+        LocalDateTime rangeAnterior = primeiraBatida.minus(tempoDescansoEntreJornada).plus(1, ChronoUnit.MILLIS);
+        LocalDateTime rangePosterior = ultimaBatida.plus(tempoDescansoEntreJornada).minus(1, ChronoUnit.MILLIS);
+        Optional<ResumoPontoDia> jornadaAfetadaAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenDesc(funcionarioId, rangeAnterior, primeiraBatida);
+        Optional<ResumoPontoDia> jornadaAfetadaPosterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(funcionarioId, ultimaBatida, rangePosterior);
+        if (jornadaAfetadaAnterior.isPresent()) {
+            ResumoPontoDia jornadaAfetadaAnteriorObj = jornadaAfetadaAnterior.get();
+            LocalDateTime anterior = jornadaAfetadaAnteriorObj.getUltimaBatida();   
+            long distanciaEmSegundosAnterior = Duration.between(anterior, primeiraBatida).getSeconds();
+            
+            if (distanciaEmSegundosAnterior > 0 ) {
+                juntarJornadas(funcionarioId,jornadaAfetada, jornadaAfetadaAnteriorObj, listaRegistrosJornadaAfetada, jornadaConfig);
+            }
+
+        }
+
+        if (jornadaAfetadaPosterior.isPresent()) {
+            ResumoPontoDia jornadaAfetadaPosteriorObj = jornadaAfetadaPosterior.get();
+            LocalDateTime posterior = jornadaAfetadaPosteriorObj.getPrimeiraBatida();
+            long distanciaEmSegundosPosterior = Duration.between(ultimaBatida, posterior).getSeconds();
+    
+            if (distanciaEmSegundosPosterior > 0) {
+                juntarJornadas(funcionarioId, jornadaAfetada, jornadaAfetadaPosteriorObj, listaRegistrosJornadaAfetada, jornadaConfig);
+            }
+        }
+
+        calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
     }
 
     private void inserirXrefPontoResumo( UUID funcionarioId, UUID idJornadaNova, UUID idRegistroPonto, LocalDateTime dataRegistro) {
@@ -153,7 +188,7 @@ public class CalcularBancoHorasSoftDeleteService {
     }
 
     private void recalcularJornadaAfetada(ResumoPontoDia jornadaAfetada, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig) {
-        CalcularResumoDiaUtils.recalcularResumoDoDia(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
+        calcularResumoDiaUtils.recalcularResumoDoDia(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
         reordenarTipos(listaRegistrosJornadaAfetada);
         salvarJornadaAfetada(jornadaAfetada);
     }
@@ -168,6 +203,39 @@ public class CalcularBancoHorasSoftDeleteService {
         }
     }
 
+
+    @Transactional
+    private void juntarJornadas(UUID funcionarioId, ResumoPontoDia jornadaAfetada, ResumoPontoDia jornadaAdd, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig) {
+        if (jornadaAdd.getId().equals(jornadaAfetada.getId())) {
+            return;
+        }
+        List<RegistroPonto> listaRegistrosJornadaAdd = xrefPontoResumoRepository
+        .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAdd.getId());
+
+        listaRegistrosJornadaAfetada.addAll(listaRegistrosJornadaAdd);
+        
+        for (RegistroPonto registro : listaRegistrosJornadaAdd) {
+            resumoPontoDiaRepository.deleteById(jornadaAdd.getId());
+            xrefPontoResumoRepository.deleteByRegistroPontoId(registro.getId());
+            salvarXrefPontoResumo(funcionarioId, jornadaAfetada.getId(), registro.getId(), registro.getCreatedAt());
+        }
+
+        recalcularJornadaAfetada(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
+    }
+
+    private void salvarXrefPontoResumo(UUID funcionarioId, UUID idJornada, UUID idRegistroPonto, LocalDateTime dataRegistro) {
+        if (xrefPontoResumoRepository.existsByRegistroPontoId(idRegistroPonto)) {
+            return;
+        }
+        var xref = new XrefPontoResumo();
+        xref.setId(UUID.randomUUID());
+        xref.setFuncionarioId(funcionarioId);
+        xref.setRegistroPontoId(idRegistroPonto);
+        xref.setResumoPontoDiaId(idJornada);
+        xref.setCreatedAt(dataRegistro);
+        xrefPontoResumoRepository.save(xref);
+    }
+
     private void salvarRegistroPonto(RegistroPonto registro) {
         registroPontoRepository.save(registro);
     }
@@ -180,5 +248,4 @@ public class CalcularBancoHorasSoftDeleteService {
         xrefPontoResumoRepository.deleteByResumoPontoDiaId(idJornada);
         resumoPontoDiaRepository.deleteById(idJornada);
     }
-
 }

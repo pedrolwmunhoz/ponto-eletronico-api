@@ -1,15 +1,13 @@
 package com.pontoeletronico.api.domain.entity.registro;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "registro_ponto")
 public class RegistroPonto {
 
@@ -37,9 +35,6 @@ public class RegistroPonto {
 
     @Column(name = "descricao", columnDefinition = "TEXT")
     private String descricao;
-
-    @Column(name = "ativo", nullable = false)
-    private Boolean ativo = true;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

@@ -47,6 +47,17 @@ public class BancoHorasService {
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
 
+    /** Resumo banco de horas para o próprio funcionário (usuario). Resolve empresaId pela identificação ativa. */
+    public ResumoBancoHorasResponse resumoBancoHorasPorFuncionario(UUID funcionarioId, HttpServletRequest httpRequest) {
+        var empresaId = identificacaoFuncionarioRepository.findEmpresaIdByFuncionarioIdAndAtivoTrue(funcionarioId)
+                .orElseThrow(() -> {
+                    var dataRef = LocalDateTime.now();
+                    auditoriaRegistroAsyncService.registrarSemDispositivoID(funcionarioId, ACAO_RESUMO_BANCO_HORAS, "Resumo banco de horas (usuário)", null, null, false, MensagemErro.FUNCIONARIO_NAO_PERTENCE_EMPRESA.getMensagem(), dataRef, httpRequest);
+                    return new FuncionarioNaoPertenceEmpresaException();
+                });
+        return resumoBancoHoras(empresaId, funcionarioId, httpRequest);
+    }
+
     /** Doc id 43: Resumo banco de horas. Pega registros do mês atual (zoneId da empresa). Soma mês + histórico. */
     public ResumoBancoHorasResponse resumoBancoHoras(UUID empresaId, UUID funcionarioId, HttpServletRequest httpRequest) {
         identificacaoFuncionarioRepository.findByEmpresaIdAndFuncionarioIdAndAtivoTrue(empresaId, funcionarioId)
@@ -98,6 +109,17 @@ public class BancoHorasService {
                 formatDurationToHHmm(totalHorasTrabalhadas),
                 formatMinutesToHHmmSigned(totalFinalBanco)
         );
+    }
+
+    /** Listar histórico banco de horas do próprio funcionário (usuario). Resolve empresaId pela identificação ativa. */
+    public BancoHorasHistoricoPageResponse listarHistoricoPorFuncionario(UUID funcionarioId, int page, int size, HttpServletRequest httpRequest) {
+        var empresaId = identificacaoFuncionarioRepository.findEmpresaIdByFuncionarioIdAndAtivoTrue(funcionarioId)
+                .orElseThrow(() -> {
+                    var dataRef = LocalDateTime.now();
+                    auditoriaRegistroAsyncService.registrarSemDispositivoID(funcionarioId, "LISTAR_BANCO_HORAS_HISTORICO", "Listar histórico banco de horas (usuário)", null, null, false, MensagemErro.FUNCIONARIO_NAO_PERTENCE_EMPRESA.getMensagem(), dataRef, httpRequest);
+                    return new FuncionarioNaoPertenceEmpresaException();
+                });
+        return listarHistorico(empresaId, funcionarioId, page, size, httpRequest);
     }
 
     /** Doc id 44b: Listar histórico banco de horas de um funcionário (fechamentos mensais). */

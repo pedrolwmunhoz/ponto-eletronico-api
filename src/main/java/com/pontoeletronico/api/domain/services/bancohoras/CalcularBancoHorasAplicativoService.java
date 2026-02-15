@@ -16,11 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import lombok.AllArgsConstructor;
 /**
  * Lógica de jornada para registro via aplicativo (tablet público ou app funcionário).
  * Usa EstadoJornadaFuncionario (ultimaBatida, tipoUltimaBatida, ultimaJornadaId) e tempoDescansoEntreJornada:
@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  * - Caso contrário → nova jornada com tipo do ponto ENTRADA.
  */
 @Service
+@AllArgsConstructor
 public class CalcularBancoHorasAplicativoService {
 
     private final EstadoJornadaFuncionarioRepository estadoJornadaFuncionarioRepository;
@@ -38,24 +39,8 @@ public class CalcularBancoHorasAplicativoService {
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
     private final BancoHorasMensalService bancoHorasMensalService;
     private final MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService;
+    private final CalcularResumoDiaUtils calcularResumoDiaUtils;
 
-    public CalcularBancoHorasAplicativoService(EstadoJornadaFuncionarioRepository estadoJornadaFuncionarioRepository,
-                                                       EmpresaJornadaConfigRepository empresaJornadaConfigRepository,
-                                                       JornadaFuncionarioConfigRepository jornadaFuncionarioConfigRepository,
-                                                       RegistroPontoRepository registroPontoRepository,
-                                                       ResumoPontoDiaRepository resumoPontoDiaRepository,
-                                                       XrefPontoResumoRepository xrefPontoResumoRepository,
-                                                       BancoHorasMensalService bancoHorasMensalService,
-                                                       MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService) {
-        this.estadoJornadaFuncionarioRepository = estadoJornadaFuncionarioRepository;
-        this.empresaJornadaConfigRepository = empresaJornadaConfigRepository;
-        this.jornadaFuncionarioConfigRepository = jornadaFuncionarioConfigRepository;
-        this.registroPontoRepository = registroPontoRepository;
-        this.resumoPontoDiaRepository = resumoPontoDiaRepository;
-        this.xrefPontoResumoRepository = xrefPontoResumoRepository;
-        this.bancoHorasMensalService = bancoHorasMensalService;
-        this.metricasDiariaEmpresaContadorService = metricasDiariaEmpresaContadorService;
-    }
 
     /**
      * Processa o registro de ponto feito via aplicativo: decide mesma jornada ou nova (ENTRADA) e atualiza estado.
@@ -99,9 +84,9 @@ public class CalcularBancoHorasAplicativoService {
 
         var listaXref = xrefPontoResumoRepository.findByResumoPontoDiaIdOrderByCreatedAtAsc(resumo.getId());
         var idsRegistros = listaXref.stream().map(XrefPontoResumo::getRegistroPontoId).collect(Collectors.toSet());
-        var registros = registroPontoRepository.findByIdInAndAtivoTrueOrderByCreatedAtAsc(idsRegistros);
+        var registros = registroPontoRepository.findByIdInOrderByCreatedAtAsc(idsRegistros);
 
-        CalcularResumoDiaUtils.recalcularResumoDoDia(resumo, registros, jornadaConfig);
+        calcularResumoDiaUtils.recalcularResumoDoDia(resumo, registros, jornadaConfig);
         resumoPontoDiaRepository.save(resumo);
 
         if (!tipoEntradaNovo) {
@@ -118,7 +103,7 @@ public class CalcularBancoHorasAplicativoService {
 
     private void criarNovaJornadaEAtualizarEstado(UUID funcionarioId, UUID empresaId, UUID idRegistro, LocalDateTime dataRegistro,
                                                  EstadoJornadaFuncionario estadoExistente, JornadaConfig jornadaConfig) {
-        var registro = registroPontoRepository.findByIdAndUsuarioIdAndAtivoTrue(idRegistro, funcionarioId).orElse(null);
+        var registro = registroPontoRepository.findByIdAndUsuarioId(idRegistro, funcionarioId).orElse(null);
         if (registro != null) {
             registro.setTipoEntrada(true);
             registroPontoRepository.save(registro);

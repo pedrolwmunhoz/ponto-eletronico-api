@@ -23,6 +23,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -77,11 +78,11 @@ public class EmpresaSolicitacoesPontoService {
         
         RegistroPonto registroPonto = registroPontoRepository.findById(registroId)
             .orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
-        registroPontoRepository.desativar(registroId, funcionarioId);
-
-
-        
         calcularBancoHorasSoftDeleteService.processarSoftDelete(funcionarioId, empresaId, registroId, registroPonto.getCreatedAt(), obterJornadaConfigUtils.obterJornadaConfig(empresaId, funcionarioId));
+        var rows = registroPontoRepository.deleteByIdAndUsuarioId(registroId, funcionarioId);
+        if (rows == 0) {
+            throw new RegistroNaoEncontradoException("Registro de ponto não encontrado");
+        }
     }
 
     /** Editar registro: desativa o antigo e cria outro com os novos dados; dispara recálculo (soft delete + entrada manual). */
@@ -97,7 +98,7 @@ public class EmpresaSolicitacoesPontoService {
             throw new BadRequestException("Id do registro de ponto é obrigatório");
         }
         
-        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioIdAndAtivoTrue(idempotencyKey, funcionarioId).isPresent()) {
+        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).isPresent()) {
             return;
         }
         
@@ -105,7 +106,7 @@ public class EmpresaSolicitacoesPontoService {
         identificacaoFuncionarioRepository.findByEmpresaIdAndFuncionarioIdAndAtivoTrue(empresaId, funcionarioId)
                 .orElseThrow(() -> new FuncionarioNaoPertenceEmpresaException());
         
-        var rows = registroPontoRepository.desativar(registroId, funcionarioId);
+        var rows = registroPontoRepository.deleteByIdAndUsuarioId(registroId, funcionarioId);
         if (rows == 0) {
             throw new RegistroNaoEncontradoException("Registro de ponto não encontrado");
         }
@@ -134,8 +135,13 @@ public class EmpresaSolicitacoesPontoService {
             throw new BadRequestException("Horário e justificativa são obrigatórios");
         }
 
-        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioIdAndAtivoTrue(idempotencyKey, funcionarioId).isPresent()) {
+        if (registroPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).isPresent()) {
             return;
+        }
+
+        Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(funcionarioId, request.horario());
+        if (registroPontoOptional.isPresent()) {
+            throw new BadRequestException("Registro de ponto já existe");
         }
 
         lockRegistroPontoService.adquirirLock(funcionarioId);
@@ -189,6 +195,11 @@ public class EmpresaSolicitacoesPontoService {
             throw new RegistroNaoEncontradoException("Solicitação já foi processada ou não encontrada");
         }
         if (SolicitacaoPonto.TIPO_CRIAR == solicitacaoPonto.getTipoSolicitacaoId()) {
+            Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(solicitacaoPonto.getUsuarioId(), solicitacaoPonto.getCreatedAt());
+            if (registroPontoOptional.isPresent()) {
+                throw new BadRequestException("Registro de ponto já existe");
+            }
+
             var horario = solicitacaoPonto.getDataHoraRegistro();
             var dispositivoId = dispositivoService.obterOuCriar(solicitacaoPonto.getUsuarioId(), httpRequest);
             var idNovoRegistro = UUID.randomUUID();
@@ -199,7 +210,7 @@ public class EmpresaSolicitacoesPontoService {
         } else {
             RegistroPonto registroPontoDeletado = registroPontoRepository.findById(solicitacaoPonto.getRegistroPontoId())
             .orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
-            var rowsDelete = registroPontoRepository.desativar(solicitacaoPonto.getRegistroPontoId(), solicitacaoPonto.getUsuarioId());
+            var rowsDelete = registroPontoRepository.deleteByIdAndUsuarioId(solicitacaoPonto.getRegistroPontoId(), solicitacaoPonto.getUsuarioId());
             if (rowsDelete == 0) {
                 throw new RegistroNaoEncontradoException("Registro de ponto não encontrado");
             }

@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 
 import com.pontoeletronico.api.domain.entity.usuario.UsuarioTelefone;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,15 +40,4 @@ public interface UsuarioTelefoneRepository extends JpaRepository<UsuarioTelefone
             WHERE usuario_id = :usuarioId AND ativo = true AND data_desativacao IS NULL
             """, nativeQuery = true)
     int desativarAllByUsuarioId(@Param("usuarioId") UUID usuarioId, @Param("dataDesativacao") LocalDateTime dataDesativacao);
-
-    @Query(value = """
-            SELECT *
-            FROM usuario_telefone
-            WHERE usuario_id = :usuarioId
-              AND ativo = true
-              AND data_desativacao IS NULL
-            ORDER BY id
-            LIMIT 1
-            """, nativeQuery = true)
-    Optional<UsuarioTelefone> findFirstByUsuarioId(@Param("usuarioId") UUID usuarioId);
 }

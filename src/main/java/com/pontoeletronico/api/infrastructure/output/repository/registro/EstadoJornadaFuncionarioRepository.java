@@ -15,6 +15,4 @@ public interface EstadoJornadaFuncionarioRepository extends JpaRepository<Estado
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM EstadoJornadaFuncionario e WHERE e.funcionarioId = :funcionarioId")
     Optional<EstadoJornadaFuncionario> findByFuncionarioIdForUpdate(@Param("funcionarioId") UUID funcionarioId);
-
-    Optional<EstadoJornadaFuncionario> findByFuncionarioId(UUID funcionarioId);
 }

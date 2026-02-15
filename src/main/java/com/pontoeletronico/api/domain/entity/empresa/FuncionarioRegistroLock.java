@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import java.util.Objects;
 import java.util.UUID;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "funcionario_registro_lock")
 public class FuncionarioRegistroLock {
 
@@ -14,11 +17,6 @@ public class FuncionarioRegistroLock {
 
     @Column(name = "empresa_id", nullable = false)
     private UUID empresaId;
-
-    public UUID getFuncionarioId() { return funcionarioId; }
-    public void setFuncionarioId(UUID funcionarioId) { this.funcionarioId = funcionarioId; }
-    public UUID getEmpresaId() { return empresaId; }
-    public void setEmpresaId(UUID empresaId) { this.empresaId = empresaId; }
 
     @Override
     public boolean equals(Object o) {

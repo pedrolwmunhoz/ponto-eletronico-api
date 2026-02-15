@@ -331,6 +331,9 @@
                         <button onclick="showEntity('notificacao')" class="entity-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-50 focus:bg-blue-50 focus:text-blue-700 text-sm font-medium transition-colors" data-target="notificacao">
                             🔔 8. Notificações
                         </button>
+                        <button onclick="showEntity('feriado')" class="entity-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-50 focus:bg-blue-50 focus:text-blue-700 text-sm font-medium transition-colors" data-target="feriado">
+                            📅 9. Feriado
+                        </button>
                     </div>
                 </div>
 
@@ -737,7 +740,7 @@ public class ResumoPontoDia {
     @Column(name = "total_horas_esperadas", nullable = false, length = 20) private Duration totalHorasEsperadas = Duration.ZERO;
     @Column(name = "inconsistente", nullable = false) private Boolean inconsistente = false;
     @Column(name = "motivo_inconsistencia", length = 50) private String motivoInconsistencia;
-    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "created_at", nullable = false) private LocalDateTime createdAt;
 }</pre>
                         <p>jornada - &gt; conjunto de registros com intervalos entre eles menor que o descanso da jornada(11horas, ou 36 depende da escala) - ou seja os registro estao em um intervalo menor q o descanso entre eles - 08:00; 12:00 ;13:00 ;18:00  - quando o intervalo e maior ou igual ao descanso e visto como nova jornada</p>
                         <p>jornada - &gt; conjunto de registros de uma jornada<br>
@@ -1211,7 +1214,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             },
             registro: {
                 title: "3. Registro de Ponto (Imutável)",
-                desc: "A verdade fiscal. Tabela de fatos base para auditoria. Momento do registro = created_at (LocalDateTime). O backend grava dia_semana no INSERT a partir de created_at. Batida (app, tablet): created_at = instante da requisição. Registro manual: created_at = horário enviado pelo front. Jornada: conjunto de registros com intervalo entre eles menor que tempoDescansoEntreJornada (resumo_ponto_dia); vínculo registro↔jornada em xref_ponto_resumo. Entrada manual: ServiceCalcularBancoHorasEntradaManual busca jornada afetada por range (descanso), inclui novo registro, reordena tipos (entrada/saída), valida impacto em jornada anterior/posterior e junta se intervalo < descanso.",
+                desc: "A verdade fiscal. Tabela de fatos base para auditoria. Momento do registro = created_at (LocalDateTime). O backend grava dia_semana no INSERT a partir de created_at. Batida (app, tablet): created_at = instante da requisição. Registro manual: created_at = horário enviado pelo front. Jornada: conjunto de registros com intervalo entre eles menor que tempoDescansoEntreJornada (resumo_ponto_dia); vínculo registro↔jornada em xref_ponto_resumo. Entrada manual: ServiceCalcularBancoHorasEntradaManual busca jornada afetada por range (descanso), inclui novo registro, reordena tipos (entrada/saída), valida impacto em jornada anterior/posterior e junta se intervalo \u003c descanso.",
                 json: `// ─── TABELA: registro_ponto ───
 {
   "id": "UUID (PK)",
@@ -1221,7 +1224,6 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "dispositivoId": "UUID (FK → dispositivo.id, NOT NULL)",
   "tipoMarcacaoId": "Integer (FK → tipo_marcacao.id, NOT NULL)", // Valores: MANUAL, SISTEMA
   "descricao": "String (Nullable)",
-  "ativo": "Boolean (NOT NULL, Default: true)",
   "createdAt": "TIMESTAMP (NOT NULL). LocalDateTime. Momento do registro. Batida: backend. Manual: horário enviado pelo front.",
   "INDEX(usuarioId, createdAt)"
 }
@@ -1502,6 +1504,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "anoRef": "Integer (NOT NULL)",
   "totalHorasEsperadas": "VARCHAR(20) (NOT NULL, Default: PT0S) - Duration",
   "totalHorasTrabalhadas": "VARCHAR(20) (NOT NULL, Default: PT0S) - Duration",
+  "totalHorasTrabalhadasFeriado": "VARCHAR(20) (NOT NULL, Default: PT0S) - Duration",
   "inconsistente": "Boolean (NOT NULL, Default: false)",
   "motivoInconsistencia": "String (Nullable, length 255)",
   "ativo": "Boolean (NOT NULL, Default: true)",
@@ -1586,6 +1589,31 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "id": "Integer (PK, Auto Increment)",
   "descricao": "String (NOT NULL)", // Exemplos: ALERTA_DIVERGENCIA, AJUSTE_APROVADO, BANCO_HORAS_VENCIDO, SISTEMA
   "ativo": "Boolean (NOT NULL, Default: true)"
+}`
+            },
+            feriado: {
+                title: "9. Feriado",
+                desc: "Cadastro de feriados com tipo (Nacional, Estadual, Municipal). Usado para cálculo de ocorrência do dia (ex.: FERIADO no resumo de ponto) e regras de jornada. empresa_id NULL = abrangência conforme tipo_feriado; preenchido = feriado específico da empresa.",
+                json: `// ─── TABELA: tipo_feriado ───
+// Catálogo: NACIONAL | ESTADUAL | MUNICIPAL (abrangência do feriado).
+{
+  "id": "Integer (PK, Auto Increment)",
+  "descricao": "String (NOT NULL, UNIQUE)", // Valores: NACIONAL, ESTADUAL, MUNICIPAL
+  "ativo": "Boolean (NOT NULL, Default: true)"
+}
+
+// ─── TABELA: feriado ───
+{
+  "id": "UUID (PK)",
+  "data": "DATE (NOT NULL), ex: yyyy-MM-dd - dia do feriado",
+  "descricao": "String (NOT NULL)", // Ex.: Natal, Ano Novo, Feriado Municipal
+  "tipoFeriadoId": "Integer (FK → tipo_feriado.id, NOT NULL)", // NACIONAL, ESTADUAL ou MUNICIPAL
+  "tipoUsuarioId": "Integer (FK → tipo_usuario.id, Nullable)", // Opcional: restringe a um tipo de usuário (ex.: EMPRESA)
+  "empresaId": "UUID (FK → users.id, Nullable)", // Nullable = feriado de abrangência (tipo); preenchido = feriado específico da empresa
+  "ativo": "Boolean (NOT NULL, Default: true)",
+  "createdAt": "TIMESTAMP (NOT NULL), ex: DD-MM-YYYY HH:mm:ss",
+  "INDEX(data)",
+  "INDEX(empresaId, data)"
 }`
             }
         };
@@ -1875,7 +1903,6 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 statusCode: '200 (OK). 400 Bad Request, 401 Unauthorized',
                 response: 'Array de MetricasDiariaEmpresaResponse ordenado por data_ref ASC.'
             },
-            },
             ],
             // #endregion
             // #region Funcionario
@@ -2151,6 +2178,39 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             },
             ],
             // #endregion
+            // #region Usuario (banco-horas)
+            usuarioBancoHoras: [
+            {
+                id: 46,
+                method: 'GET',
+                url: '/api/usuario/banco-horas/resumo',
+                description: 'Resumo banco de horas do próprio funcionário',
+                auth: true,
+                observacao: 'funcionarioId = userId do JWT. SCOPE_FUNCIONARIO. Resolve empresa pela identificação ativa.',
+                statusCode: '200 (OK). 401 Unauthorized, 404 Funcionário não vinculado',
+                response: {
+                    totalHorasVencidas: 'String (HH:mm ou -HH:mm)',
+                    totalHorasEsperadas: 'String (HH:mm)',
+                    totalHorasTrabalhadas: 'String (HH:mm)',
+                    totalFinalBanco: 'String (HH:mm ou -HH:mm)'
+                }
+            },
+            {
+                id: 47,
+                method: 'GET',
+                url: '/api/usuario/banco-horas/historico',
+                description: 'Histórico de fechamentos mensais do banco de horas do próprio funcionário',
+                auth: true,
+                observacao: 'funcionarioId = userId do JWT. SCOPE_FUNCIONARIO. Paginado.',
+                params: 'page (default 0), size (default 10)',
+                statusCode: '200 (OK). 401 Unauthorized, 404 Funcionário não vinculado',
+                response: {
+                    paginacao: 'Object (totalPaginas, totalElementos, tamanhoPagina, paginaAtual)',
+                    conteudo: 'Array<{ id, funcionarioId, anoReferencia, mesReferencia, totalHorasEsperadas, totalHorasTrabalhadas, totalBancoHorasFinal, status, ... }>'
+                }
+            },
+            ],
+            // #endregion
             // #region Perfil (empresa, funcionário)
             perfil: [
             {
@@ -2323,7 +2383,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 params: 'idRegistro no path. Header: Idempotency-Key (UUID, recomendado quando gera solicitação). Valor gravado em solicitacao_ponto.idempotency_key.',
                 statusCode: '204 (No Content). 401 Unauthorized, 404 Not Found. Se criar solicitação: 201/409 (idempotência).',
                 response: 'Sem corpo. 204 No Content.',
-                notes: 'Registro de ponto usa soft delete (ativo=false). Se a empresa não permite ajuste direto, cria solicitação de remoção (idempotency_key evita duplicidade).'
+                notes: 'Remoção de registro de ponto é feita por DELETE físico. Se a empresa não permite ajuste direto, cria solicitação de remoção (idempotency_key evita duplicidade).'
             },
             ],
             // #endregion
@@ -2363,7 +2423,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 params: 'funcionarioId (UUID), registroId no path',
                 statusCode: '204 (No Content). 401 Unauthorized, 404 Not Found',
                 response: 'Sem corpo. 204 No Content.',
-                notes: 'Empresa só tem acesso aos funcionários dela mesma. Registro de ponto usa soft delete (ativo=false + dataDesativacao).'
+                notes: 'Empresa só tem acesso aos funcionários dela mesma. Registro de ponto é excluído fisicamente (DELETE).'
             },
             {
                 id: 37,
@@ -2592,8 +2652,8 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                         ativo: 'Boolean',
                         coordenadas: 'String', // latitude,longitude
                         raio: 'Integer', // metros
-                        createdAt: 'Instant',
-                        updatedAt: 'Instant'
+                        createdAt: 'LocalDateTime',
+                        updatedAt: 'LocalDateTime'
                     }
                 ]
             },
@@ -2654,7 +2714,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                         }
                     ]
                 },
-                notes: 'Resposta: arquivo binário (PDF ou Excel conforme formato). Content-Encoding: gzip. Content-Disposition: attachment; filename="ponto-detalhado-YYYY-MM.pdf" ou ".xlsx".'
+                notes: 'Resposta: arquivo binário (PDF ou Excel conforme formato). Content-Encoding: gzip. Content-Disposition: attachment; filename=\"ponto-detalhado-YYYY-MM.pdf\" ou \".xlsx\".'
             },
             {
                 id: 51,
@@ -2680,7 +2740,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                         }
                     ]
                 },
-                notes: 'Resposta: arquivo binário (PDF ou Excel conforme formato). Content-Encoding: gzip. Content-Disposition: attachment; filename="ponto-resumo-YYYY-MM.pdf" ou ".xlsx".'
+                notes: 'Resposta: arquivo binário (PDF ou Excel conforme formato). Content-Encoding: gzip. Content-Disposition: attachment; filename=\"ponto-resumo-YYYY-MM.pdf\" ou \".xlsx\".'
             },
             ],
             // #endregion
@@ -2700,7 +2760,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                         {
                             acao: 'String',
                             descricao: 'String',
-                            data: 'Instant',
+                            data: 'LocalDateTime',
                             nomeUsuario: 'String',
                             sucesso: 'Boolean'
                         }
@@ -2806,7 +2866,8 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             relatorios: 'Relatórios',
             auditoria: 'Auditoria',
             perfil: 'Perfil (empresa, funcionário)',
-            usuarios: 'Usuários'
+            usuarios: 'Usuários',
+            usuarioBancoHoras: 'Usuario (banco-horas)'
         };
 
         function renderEndpointCard(endpoint) {
@@ -2928,7 +2989,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             if (/usuarioid \(funcionário\)|funcionário extraído|jwt do funcionário/.test(s)) return 'Funcionário';
             if (/jwt da empresa|jwt do funcionário/.test(s)) return u.includes('empresa') ? 'Empresa' : 'Funcionário';
             if (u.includes('/api/empresa/') && !u.includes('/funcionario/')) return 'Empresa';
-            if (u.includes('/api/funcionario/perfil') || u.includes('/api/funcionario/ferias-afastamentos')) return 'Funcionário';
+            if (u.includes('/api/funcionario/perfil') || u.includes('/api/funcionario/ferias-afastamentos') || u.includes('/api/usuario/banco-horas')) return 'Funcionário';
             if (u.includes('/api/registro-ponto/publico')) return 'Empresa';
             if (u.includes('/api/registro-ponto')) return 'Funcionário';
             if (u.includes('/api/funcionario/')) return 'Empresa';

@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, UUID> {
@@ -53,18 +52,8 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
         @Param("motivoInconsistencia") String motivoInconsistencia,
         @Param("createdAt") LocalDateTime createdAt
     );
-    @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) = :data", nativeQuery = true)
-    Optional<ResumoPontoDia> findByFuncionarioIdAndData(@Param("funcionarioId") UUID funcionarioId, @Param("data") LocalDate data);
-
-    @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.empresa_id = :empresaId AND CAST(r.primeira_batida AS date) BETWEEN :inicio AND :fim ORDER BY r.funcionario_id, r.primeira_batida", nativeQuery = true)
-    List<ResumoPontoDia> findByEmpresaIdAndDataBetweenOrderByFuncionarioIdAscDataAsc(
-            @Param("empresaId") UUID empresaId, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
-
     @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) BETWEEN :inicio AND :fim ORDER BY r.primeira_batida ASC, r.created_at ASC", nativeQuery = true)
     List<ResumoPontoDia> findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscCreatedAtAsc(
             @Param("funcionarioId") UUID funcionarioId, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
 
-    @Modifying
-    @Query(value = "DELETE FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) >= :data", nativeQuery = true)
-    void deleteByFuncionarioIdAndDataGreaterThanEqual(@Param("funcionarioId") UUID funcionarioId, @Param("data") LocalDate data);
 }

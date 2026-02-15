@@ -10,27 +10,27 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "afastamento")
-public class Afastamento {
+@Table(name = "feriado")
+public class Feriado {
 
     @Id
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "funcionario_id", nullable = false)
-    private UUID funcionarioId;
+    @Column(name = "data", nullable = false)
+    private LocalDate data;
 
-    @Column(name = "tipo_afastamento_id", nullable = false)
-    private Integer tipoAfastamentoId;
+    @Column(name = "descricao", nullable = false, length = 255)
+    private String descricao;
 
-    @Column(name = "data_inicio", nullable = false)
-    private LocalDate dataInicio;
+    @Column(name = "tipo_feriado_id", nullable = false)
+    private Integer tipoFeriadoId;
 
-    @Column(name = "data_fim")
-    private LocalDate dataFim;
+    @Column(name = "tipo_usuario_id")
+    private Integer tipoUsuarioId;
 
-    @Column(name = "observacao")
-    private String observacao;
+    @Column(name = "empresa_id")
+    private UUID empresaId;
 
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;
@@ -38,16 +38,16 @@ public class Afastamento {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Afastamento that = (Afastamento) o;
+        Feriado that = (Feriado) o;
         return Objects.equals(id, that.id);
     }
+
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }
