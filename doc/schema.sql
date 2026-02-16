@@ -561,15 +561,16 @@ CREATE TABLE IF NOT EXISTS registro_ponto (
 CREATE INDEX IF NOT EXISTS idx_registro_ponto_usuario_created ON registro_ponto(usuario_id, created_at);
 
 -- 42. resumo_ponto_dia (jornada - conjunto de registros com intervalo menor que tempo_descanso_entre_jornada)
--- total_horas_trabalhadas e total_horas_esperadas: VARCHAR(20), formato serializado pela JVM (ex: PT8H30M)
+-- total_horas_*: VARCHAR(20), formato serializado pela JVM (ex: PT8H30M)
 CREATE TABLE IF NOT EXISTS resumo_ponto_dia (
-    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    funcionario_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    empresa_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    primeira_batida         TIMESTAMP NULL,
-    ultima_batida           TIMESTAMP NULL,
-    total_horas_trabalhadas VARCHAR(20) NOT NULL DEFAULT 'PT0S',
-    total_horas_esperadas   VARCHAR(20) NOT NULL DEFAULT 'PT0S',
+    id                              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    funcionario_id                  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    empresa_id                      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    primeira_batida                 TIMESTAMP NULL,
+    ultima_batida                   TIMESTAMP NULL,
+    total_horas_trabalhadas         VARCHAR(20) NOT NULL DEFAULT 'PT0S',
+    total_horas_trabalhadas_feriado VARCHAR(20) NOT NULL DEFAULT 'PT0S',
+    total_horas_esperadas           VARCHAR(20) NOT NULL DEFAULT 'PT0S',
     inconsistente           BOOLEAN NOT NULL DEFAULT false,
     motivo_inconsistencia   VARCHAR(50) NULL,
     created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
