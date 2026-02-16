@@ -1,5 +1,6 @@
 # Render Blueprint - Ponto Eletrônico API
-# Doc: https://render.com/docs/blueprint-spec
+# Banco: use seu Supabase. Defina no Dashboard do Render:
+#   SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
 
 services:
   - type: web
@@ -11,21 +12,9 @@ services:
     dockerContext: .
     healthCheckPath: /swagger-ui.html
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ponto-db
-          property: connectionString
+      - key: SPRING_DATASOURCE_URL
+        sync: false
       - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: ponto-db
-          property: user
+        sync: false
       - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: ponto-db
-          property: password
-    # JWT: as chaves vêm do classpath (keys/app.pub e app.key no JAR). Para produção, use chaves fora do repositório.
-
-databases:
-  - name: ponto-db
-    plan: free
-    region: oregon
+        sync: false
