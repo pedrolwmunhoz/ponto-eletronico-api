@@ -8,6 +8,7 @@ import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaP
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -23,6 +24,19 @@ public class EmpresaPerfilService {
                                 AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
         this.empresaPerfilRepository = empresaPerfilRepository;
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
+    }
+
+    /** Converte string do banco (ISO-8601 ou nanossegundos numéricos) para Duration. */
+    private static Duration parseDuration(String raw) {
+        if (raw == null || raw.isBlank()) return Duration.ZERO;
+        String s = raw.trim();
+        if (s.startsWith("PT") || s.startsWith("-PT")) return Duration.parse(s);
+        try {
+            long nanos = Long.parseLong(s);
+            return Duration.ofNanos(nanos);
+        } catch (NumberFormatException e) {
+            return Duration.ZERO;
+        }
     }
 
     /** Doc id 27: Recuperar informações da empresa. */
@@ -47,10 +61,10 @@ public class EmpresaPerfilService {
                 p.getUf(),
                 p.getCep(),
                 p.getTimezone(),
-                p.getCargaDiariaPadrao(),
-                p.getCargaSemanalPadrao(),
-                p.getToleranciaPadrao(),
-                p.getIntervaloPadrao(),
+                parseDuration(p.getCargaDiariaPadrao()),
+                parseDuration(p.getCargaSemanalPadrao()),
+                parseDuration(p.getToleranciaPadrao()),
+                parseDuration(p.getIntervaloPadrao()),
                 p.getControlePontoObrigatorio(),
                 p.getTipoModeloPonto(),
                 p.getTempoRetencao(),

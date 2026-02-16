@@ -1,7 +1,5 @@
 package com.pontoeletronico.api.infrastructure.output.repository.empresa;
 
-import java.time.Duration;
-
 public interface EmpresaPerfilProjection {
 
     String getUsername();
@@ -20,10 +18,11 @@ public interface EmpresaPerfilProjection {
     String getUf();
     String getCep();
     String getTimezone();
-    Duration getCargaDiariaPadrao();
-    Duration getCargaSemanalPadrao();
-    Duration getToleranciaPadrao();
-    Duration getIntervaloPadrao();
+    /** Valor no banco: ISO-8601 (PT8H) ou numérico em nanossegundos (legado). */
+    String getCargaDiariaPadrao();
+    String getCargaSemanalPadrao();
+    String getToleranciaPadrao();
+    String getIntervaloPadrao();
     Boolean getControlePontoObrigatorio();
     String getTipoModeloPonto();
     Integer getTempoRetencao();

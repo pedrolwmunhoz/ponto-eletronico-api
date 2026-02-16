@@ -1,9 +1,25 @@
--- 945 feriados (2001 a 2078). usuario_id: ADMIN ou primeiro user. tipo_feriado_id=1 NACIONAL
-INSERT INTO feriado (id, data, descricao, tipo_feriado_id, usuario_id, ativo, created_at)
-SELECT gen_random_uuid(), d.data, d.descricao, d.tipo_feriado_id,
-  COALESCE((SELECT u.id FROM users u INNER JOIN tipo_usuario tp ON u.tipo_usuario_id = tp.id WHERE tp.descricao = 'ADMIN' LIMIT 1),(SELECT id FROM users ORDER BY created_at LIMIT 1)),
-  true, CURRENT_TIMESTAMP
-FROM (VALUES
+-- 945 feriados (2001 a 2078). usuario_id: ADMIN ou primeiro user. tipo_feriado_id=1 NACIONAL.
+-- Exige: tabela users com pelo menos 1 registro; tipo_feriado com id=1 (NACIONAL). Rode doc/schema.sql antes.
+-- Idempotente: não insere de novo se já existir feriado na mesma data para o mesmo usuario_id.
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM users LIMIT 1) THEN
+    RAISE EXCEPTION 'Tabela users vazia. Crie um usuário (ex.: ADMIN) antes. Rode o schema ou seed.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM tipo_feriado WHERE id = 1) THEN
+    RAISE EXCEPTION 'tipo_feriado id=1 (NACIONAL) não existe. Rode doc/schema.sql antes.';
+  END IF;
+END $$;
+
+WITH uid AS (
+  SELECT COALESCE(
+    (SELECT u.id FROM users u JOIN tipo_usuario tp ON u.tipo_usuario_id = tp.id WHERE tp.descricao = 'ADMIN' LIMIT 1),
+    (SELECT id FROM users ORDER BY created_at LIMIT 1)
+  ) AS id
+),
+dados(data, descricao, tipo_feriado_id) AS (
+  VALUES
     ('2001-01-01'::date, 'Confraternização Universal', 1),
     ('2001-02-27'::date, 'Carnaval', 1),
     ('2001-04-13'::date, 'Paixão de Cristo', 1),
@@ -949,4 +965,10 @@ FROM (VALUES
     ('2078-11-15'::date, 'Proclamação da República', 1),
     ('2078-11-20'::date, 'Consciência Negra', 1),
     ('2078-12-25'::date, 'Natal', 1)
-) AS d(data, descricao, tipo_feriado_id);
+)
+INSERT INTO feriado (id, data, descricao, tipo_feriado_id, usuario_id, ativo, created_at)
+SELECT gen_random_uuid(), d.data, d.descricao, d.tipo_feriado_id, uid.id, true, CURRENT_TIMESTAMP
+FROM dados d
+CROSS JOIN uid
+WHERE uid.id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM feriado f WHERE f.usuario_id = uid.id AND f.data = d.data);
