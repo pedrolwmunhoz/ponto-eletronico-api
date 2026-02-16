@@ -28,5 +28,5 @@ public interface PerfilSwagger {
             @ApiResponse(responseCode = "404", description = "Empresa não encontrada"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    ResponseEntity<EmpresaPerfilResponse> buscarPerfilEmpresa(@RequestHeader("Authorization") String authorization);
+    ResponseEntity<EmpresaPerfilResponse> buscarPerfilEmpresa(@RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 }

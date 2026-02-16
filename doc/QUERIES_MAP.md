@@ -83,10 +83,10 @@ Cada repositório foi verificado: **cada método/query** foi buscado no projeto.
 
 ### UsuarioTelefoneRepository
 - insert ✅
-- existsByIdAndUsuarioIdAndAtivo ✅
-- existsByCodigoPaisAndDddAndNumeroAndAtivo ✅
-- desativar ✅
-- desativarAllByUsuarioId ✅  
+- existsByIdAndUsuarioId ✅
+- existsByCodigoPaisAndDddAndNumero ✅
+- deleteByIdAndUsuarioId ✅
+- deleteAllByUsuarioId ✅
 - ~~findFirstByUsuarioId~~ ❌ REMOVIDO  
 
 ### ContratoFuncionarioRepository
@@ -116,7 +116,8 @@ Cada repositório foi verificado: **cada método/query** foi buscado no projeto.
 - findCredencialIdByUsuarioAndTipo ✅
 - findCredencialIdByUsuarioTipoCategoria ✅
 - findByUsuarioIdAndValorAndTipoCredencialId ✅
-- desativar ✅  
+- updateValor ✅
+- deleteByIdAndUsuarioId ✅
 - ~~findEmailPrimarioByUsuarioId~~ ❌ REMOVIDO  
 
 ### HistoricoBloqueioRepository

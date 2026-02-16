@@ -40,6 +40,16 @@ public class UsuarioController implements UsuarioSwagger {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/email")
+    @PreAuthorize("hasAnyAuthority('SCOPE_ADMIN','SCOPE_EMPRESA','SCOPE_FUNCIONARIO')")
+    public ResponseEntity<Void> atualizarEmail(@Valid @RequestBody UsuarioEmailRequest request,
+                                               @RequestHeader("Authorization") String authorization,
+                                               HttpServletRequest httpRequest) {
+        var usuarioId = jwtUtil.extractUserIdFromToken(authorization);
+        usuarioService.atualizarEmail(usuarioId, request, httpRequest);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/email")
     @PreAuthorize("hasAnyAuthority('SCOPE_ADMIN','SCOPE_EMPRESA','SCOPE_FUNCIONARIO')")
     public ResponseEntity<Void> adicionarEmail(@Valid @RequestBody UsuarioEmailRequest request,

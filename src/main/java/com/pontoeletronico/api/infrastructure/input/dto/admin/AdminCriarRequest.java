@@ -18,7 +18,7 @@ public record AdminCriarRequest(
         String username,
 
         @NotBlank(message = "valor é obrigatório")
-        @Size(max = 255)
+        @Size(min = 2, max = 255, message = "valor deve ter entre 2 e 255 caracteres")
         @Schema(description = "Valor da credencial (email ou username conforme tipoCredencial)", example = "admin@admin.com", requiredMode = Schema.RequiredMode.REQUIRED)
         String valor,
 

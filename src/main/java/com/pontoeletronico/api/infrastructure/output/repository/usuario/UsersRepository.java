@@ -33,16 +33,12 @@ public interface UsersRepository extends JpaRepository<Users, UUID> {
                 FROM user_credential uc
                 JOIN tipo_credential tc ON tc.id = uc.tipo_credencial_id AND tc.descricao = 'EMAIL'
                 WHERE uc.usuario_id = u.id
-                  AND uc.ativo = true
-                  AND uc.data_desativacao IS NULL
             ) emails ON true
 
             LEFT JOIN LATERAL (
                 SELECT COALESCE(json_agg(json_build_object('codigoPais', ut.codigo_pais, 'ddd', ut.ddd, 'numero', ut.numero))::text, '[]') AS telefones
                 FROM usuario_telefone ut
                 WHERE ut.usuario_id = u.id
-                  AND ut.ativo = true
-                  AND ut.data_desativacao IS NULL
             ) tels ON true
 
             ORDER BY u.username

@@ -235,15 +235,13 @@ CREATE TABLE IF NOT EXISTS users (
 -- USUÁRIO - Tabelas compartilhadas (funcionários e empresas)
 -- ============================================================================
 
--- 18. usuario_telefone
+-- 18. usuario_telefone (delete físico; sem ativo/data_desativacao)
 CREATE TABLE IF NOT EXISTS usuario_telefone (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     codigo_pais     VARCHAR(10) NOT NULL,
     ddd             VARCHAR(5) NOT NULL,
     numero          VARCHAR(20) NOT NULL,
-    ativo           BOOLEAN NOT NULL DEFAULT true,
-    data_desativacao TIMESTAMP NULL,
     UNIQUE(codigo_pais, ddd, numero)
 );
 
@@ -274,6 +272,8 @@ CREATE TABLE IF NOT EXISTS identificacao_funcionario (
     funcionario_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     empresa_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nome_completo   VARCHAR(255) NOT NULL,
+    primeiro_nome   VARCHAR(100) NOT NULL,
+    ultimo_nome     VARCHAR(100) NOT NULL,
     cpf             VARCHAR(14) NOT NULL UNIQUE,
     codigo_ponto    INTEGER NOT NULL CHECK (codigo_ponto >= 0 AND codigo_ponto <= 999999),
     data_nascimento DATE NULL,
@@ -441,15 +441,13 @@ CREATE TABLE IF NOT EXISTS metricas_diaria_empresa_lock (
 -- Cadastro de empresa: cria user_credential (valor=email, tipo=EMAIL) + user_password
 -- ============================================================================
 
--- 34. user_credential
+-- 34. user_credential (delete físico; sem ativo/data_desativacao)
 CREATE TABLE IF NOT EXISTS user_credential (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     tipo_credencial_id      INTEGER NOT NULL REFERENCES tipo_credential(id),
     categoria_credential_id INTEGER NOT NULL REFERENCES tipo_categoria_credential(id) DEFAULT 1,
-    valor                   VARCHAR(255) NOT NULL UNIQUE,
-    ativo                   BOOLEAN NOT NULL DEFAULT true,
-    data_desativacao        TIMESTAMP NULL
+    valor                   VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_credential_usuario_id ON user_credential(usuario_id);
@@ -735,21 +733,20 @@ CREATE INDEX IF NOT EXISTS idx_afastamento_ativo_inicio ON afastamento(ativo, da
 -- ============================================================================
 
 -- 51. feriado
--- empresa_id NULL = feriado de abrangência (tipo); preenchido = feriado específico da empresa.
--- tipo_usuario_id: opcional, para restringir feriado a um tipo de usuário (ex.: só EMPRESA).
+-- usuario_id = usuário que criou o feriado (da tabela users). Empresa ou Admin.
+-- Listagem empresa: feriados onde usuario_id = empresa logada OU usuario_id pertence a Admin (join users.tipo_usuario_id = ADMIN).
 CREATE TABLE IF NOT EXISTS feriado (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     data                DATE NOT NULL,
     descricao           VARCHAR(255) NOT NULL,
     tipo_feriado_id     INTEGER NOT NULL REFERENCES tipo_feriado(id),
-    tipo_usuario_id     INTEGER NULL REFERENCES tipo_usuario(id),
-    empresa_id          UUID NULL REFERENCES users(id) ON DELETE CASCADE,
+    usuario_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     ativo               BOOLEAN NOT NULL DEFAULT true,
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_feriado_data ON feriado(data);
-CREATE INDEX IF NOT EXISTS idx_feriado_empresa_data ON feriado(empresa_id, data);
+CREATE INDEX IF NOT EXISTS idx_feriado_usuario_data ON feriado(usuario_id, data);
 
 -- ============================================================================
 -- AUDITORIA

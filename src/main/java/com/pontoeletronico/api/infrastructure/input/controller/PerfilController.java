@@ -35,14 +35,15 @@ public class PerfilController implements PerfilSwagger {
     @PreAuthorize("hasAuthority('SCOPE_FUNCIONARIO')")
     public ResponseEntity<FuncionarioPerfilResponse> buscarPerfilFuncionario(@RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest) {
         var funcionarioId = jwtUtil.extractUserIdFromToken(authorization);
-        return ResponseEntity.ok(funcionarioPerfilService.buscar(funcionarioId, httpRequest));
+        return ResponseEntity.ok(funcionarioPerfilService.buscar(funcionarioId, funcionarioId, httpRequest));
     }
 
     @GetMapping("/empresa/perfil")
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
-    public ResponseEntity<EmpresaPerfilResponse> buscarPerfilEmpresa(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<EmpresaPerfilResponse> buscarPerfilEmpresa(@RequestHeader("Authorization") String authorization,
+                                                                    HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = empresaPerfilService.buscar(empresaId);
+        var response = empresaPerfilService.buscar(empresaId, httpRequest);
         return ResponseEntity.ok(response);
     }
 }

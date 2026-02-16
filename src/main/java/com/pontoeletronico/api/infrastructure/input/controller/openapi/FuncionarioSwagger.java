@@ -89,7 +89,7 @@ public interface FuncionarioSwagger {
             @ApiResponse(responseCode = "401", description = "Não autorizado"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    ResponseEntity<FuncionarioListagemPageResponse> listarFuncionarios(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String nome, @RequestHeader("Authorization") String authorization);
+    ResponseEntity<FuncionarioListagemPageResponse> listarFuncionarios(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int pageSize, @RequestParam(required = false) String nome, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
     @Operation(summary = "Recuperar perfil do funcionário", description = "Recuperar perfil do funcionário. usuarioId extraído do token JWT no backend.", tags = {"Funcionário"})
     @ApiResponses(value = {

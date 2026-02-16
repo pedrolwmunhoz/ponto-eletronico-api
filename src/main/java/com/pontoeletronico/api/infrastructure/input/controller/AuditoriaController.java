@@ -5,6 +5,7 @@ import com.pontoeletronico.api.infrastructure.input.controller.openapi.Auditoria
 import com.pontoeletronico.api.infrastructure.input.dto.auditoria.AuditoriaDetalheResponse;
 import com.pontoeletronico.api.infrastructure.input.dto.auditoria.AuditoriaListagemResponse;
 import com.pontoeletronico.api.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -30,9 +31,10 @@ public class AuditoriaController implements AuditoriaSwagger {
     public ResponseEntity<AuditoriaListagemResponse> listar(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = auditoriaService.listarPorEmpresa(empresaId, page, size);
+        var response = auditoriaService.listarPorEmpresa(empresaId, page, size, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -40,9 +42,10 @@ public class AuditoriaController implements AuditoriaSwagger {
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<AuditoriaDetalheResponse> detalhar(
             @PathVariable UUID logId,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = auditoriaService.detalhar(empresaId, logId);
+        var response = auditoriaService.detalhar(empresaId, logId, httpRequest);
         return ResponseEntity.ok(response);
     }
 }

@@ -8,6 +8,7 @@ public record EmpresaPerfilResponse(
         String cnpj,
         String razaoSocial,
         String email,
+        java.util.UUID telefoneId,
         String codigoPais,
         String ddd,
         String numero,

@@ -5,6 +5,7 @@ import com.pontoeletronico.api.infrastructure.input.dto.geofence.GeofenceListage
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,7 +23,8 @@ public interface GeofencesSwagger {
     ResponseEntity<GeofenceListagemPageResponse> listar(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size);
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest);
 
     @Operation(summary = "Criar novo geofence para a empresa", description = "Criar novo geofence para a empresa. usuarioId da empresa extraído do token JWT no backend.", tags = {"Geofences"})
     @ApiResponses(value = {
@@ -31,5 +33,5 @@ public interface GeofencesSwagger {
             @ApiResponse(responseCode = "401", description = "Não autorizado"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    ResponseEntity<Void> criar(@Valid @RequestBody CriarGeofenceRequest request, @RequestHeader("Authorization") String authorization);
+    ResponseEntity<Void> criar(@Valid @RequestBody CriarGeofenceRequest request, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 }

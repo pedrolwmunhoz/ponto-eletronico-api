@@ -1,5 +1,6 @@
 package com.pontoeletronico.api.infrastructure.input.controller;
 
+import com.pontoeletronico.api.domain.services.audit.AuditoriaRegistroAsyncService;
 import com.pontoeletronico.api.domain.services.empresa.*;
 import com.pontoeletronico.api.exception.RegistroNaoEncontradoException;
 import com.pontoeletronico.api.infrastructure.input.controller.openapi.EmpresaSwagger;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ public class EmpresaController implements EmpresaSwagger {
     private final EmpresaBancoHorasConfigService empresaBancoHorasConfigService;
     private final MetricasDiariaEmpresaConsultaService metricasDiariaEmpresaConsultaService;
     private final JwtUtil jwtUtil;
+    private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
+
+    private static final String ACAO_STATUS_CONFIG_INICIAL = "ACESSO_STATUS_CONFIG_INICIAL";
 
     public EmpresaController(EmpresaCadastroService empresaService,
                              EmpresaAtualizarEnderecoService empresaAtualizarEnderecoService,
@@ -39,7 +44,8 @@ public class EmpresaController implements EmpresaSwagger {
                              EmpresaJornadaPadraoService empresaJornadaPadraoService,
                              EmpresaBancoHorasConfigService empresaBancoHorasConfigService,
                              MetricasDiariaEmpresaConsultaService metricasDiariaEmpresaConsultaService,
-                             JwtUtil jwtUtil) {
+                             JwtUtil jwtUtil,
+                             AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
         this.empresaService = empresaService;
         this.empresaAtualizarEnderecoService = empresaAtualizarEnderecoService;
         this.empresaConfigInicialService = empresaConfigInicialService;
@@ -48,6 +54,7 @@ public class EmpresaController implements EmpresaSwagger {
         this.empresaBancoHorasConfigService = empresaBancoHorasConfigService;
         this.metricasDiariaEmpresaConsultaService = metricasDiariaEmpresaConsultaService;
         this.jwtUtil = jwtUtil;
+        this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
 
     @PostMapping
@@ -68,9 +75,11 @@ public class EmpresaController implements EmpresaSwagger {
 
     @GetMapping("/config-inicial/status")
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
-    public ResponseEntity<Map<String, Boolean>> configInicialStatus(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<Map<String, Boolean>> configInicialStatus(@RequestHeader("Authorization") String authorization,
+                                                                   HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
         boolean configInicialRealizada = empresaConfigInicialService.isConfigInicialRealizada(empresaId);
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_STATUS_CONFIG_INICIAL, "Consulta status da configuração inicial", null, null, true, null, LocalDateTime.now(), httpRequest);
         return ResponseEntity.ok(Map.of("configInicialRealizada", configInicialRealizada));
     }
 
@@ -116,9 +125,10 @@ public class EmpresaController implements EmpresaSwagger {
 
     @GetMapping("/metricas-dia")
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
-    public ResponseEntity<MetricasDiariaEmpresaResponse> metricasDia(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<MetricasDiariaEmpresaResponse> metricasDia(@RequestHeader("Authorization") String authorization,
+                                                                     HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = metricasDiariaEmpresaConsultaService.buscarMetricaHojeOuUltima(empresaId)
+        var response = metricasDiariaEmpresaConsultaService.buscarMetricaHojeOuUltima(empresaId, httpRequest)
                 .orElseThrow(() -> new RegistroNaoEncontradoException("Nenhuma métrica diária encontrada para a empresa."));
         return ResponseEntity.ok(response);
     }
@@ -128,9 +138,10 @@ public class EmpresaController implements EmpresaSwagger {
     public ResponseEntity<List<MetricasDiariaEmpresaResponse>> metricasDiaPorPeriodo(
             @RequestHeader("Authorization") String authorization,
             @RequestParam("dataInicio") LocalDate dataInicio,
-            @RequestParam("dataFim") LocalDate dataFim) {
+            @RequestParam("dataFim") LocalDate dataFim,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var list = metricasDiariaEmpresaConsultaService.listarPorDataInicioFim(empresaId, dataInicio, dataFim);
+        var list = metricasDiariaEmpresaConsultaService.listarPorDataInicioFim(empresaId, dataInicio, dataFim, httpRequest);
         return ResponseEntity.ok(list);
     }
 

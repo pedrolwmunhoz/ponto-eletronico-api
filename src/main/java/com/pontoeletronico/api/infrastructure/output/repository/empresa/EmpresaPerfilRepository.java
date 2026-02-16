@@ -16,6 +16,7 @@ public interface EmpresaPerfilRepository extends Repository<Users, UUID> {
                 edf.cnpj                            AS "cnpj",
                 edf.razao_social                    AS "razaoSocial",
                 email.valor                         AS "email",
+                tel.id                              AS "telefoneId",
                 tel.codigo_pais                     AS "codigoPais",
                 tel.ddd                             AS "ddd",
                 tel.numero                          AS "numero",
@@ -61,18 +62,14 @@ public interface EmpresaPerfilRepository extends Repository<Users, UUID> {
                 JOIN tipo_credential tc ON tc.id = uc.tipo_credencial_id AND tc.descricao = 'EMAIL'
                 JOIN tipo_categoria_credential tcc ON tcc.id = uc.categoria_credential_id AND tcc.descricao = 'PRIMARIO'
                 WHERE uc.usuario_id = u.id
-                  AND uc.ativo = true
-                  AND uc.data_desativacao IS NULL
                 ORDER BY uc.id
                 LIMIT 1
             ) email ON true
 
             LEFT JOIN LATERAL (
-                SELECT ut.codigo_pais, ut.ddd, ut.numero
+                SELECT ut.id, ut.codigo_pais, ut.ddd, ut.numero
                 FROM usuario_telefone ut
                 WHERE ut.usuario_id = u.id
-                  AND ut.ativo = true
-                  AND ut.data_desativacao IS NULL
                 ORDER BY ut.id
                 LIMIT 1
             ) tel ON true

@@ -5,6 +5,7 @@ import com.pontoeletronico.api.infrastructure.input.controller.openapi.Geofences
 import com.pontoeletronico.api.infrastructure.input.dto.geofence.CriarGeofenceRequest;
 import com.pontoeletronico.api.infrastructure.input.dto.geofence.GeofenceListagemPageResponse;
 import com.pontoeletronico.api.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,18 +31,20 @@ public class GeofencesController implements GeofencesSwagger {
     public ResponseEntity<GeofenceListagemPageResponse> listar(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = geofenceService.listarPorEmpresa(empresaId, page, size);
+        var response = geofenceService.listarPorEmpresa(empresaId, page, size, httpRequest);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/geofences")
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<Void> criar(@Valid @RequestBody CriarGeofenceRequest request,
-                                     @RequestHeader("Authorization") String authorization) {
+                                     @RequestHeader("Authorization") String authorization,
+                                     HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        geofenceService.criar(empresaId, request);
+        geofenceService.criar(empresaId, request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

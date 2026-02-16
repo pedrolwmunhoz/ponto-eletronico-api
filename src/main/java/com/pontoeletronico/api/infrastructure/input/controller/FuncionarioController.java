@@ -114,9 +114,10 @@ public class FuncionarioController implements FuncionarioSwagger {
     public ResponseEntity<FuncionarioListagemPageResponse> listarFuncionarios(@RequestParam(defaultValue = "0") int page,
                                                                               @RequestParam(defaultValue = "20") int pageSize,
                                                                               @RequestParam(required = false) String nome,
-                                                                              @RequestHeader("Authorization") String authorization) {
+                                                                              @RequestHeader("Authorization") String authorization,
+                                                                              HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = funcionarioListarService.listar(empresaId, page, pageSize, nome);
+        var response = funcionarioListarService.listar(empresaId, page, pageSize, nome, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -125,7 +126,8 @@ public class FuncionarioController implements FuncionarioSwagger {
     public ResponseEntity<FuncionarioPerfilResponse> getPerfilFuncionario(@PathVariable UUID funcionarioId,
                                                                           @RequestHeader("Authorization") String authorization,
                                                                           HttpServletRequest httpRequest) {
-        var response = funcionarioPerfilService.buscar(funcionarioId, httpRequest);
+        var empresaId = jwtUtil.extractUserIdFromToken(authorization);
+        var response = funcionarioPerfilService.buscar(empresaId, funcionarioId, httpRequest);
         return ResponseEntity.ok(response);
     }
 }

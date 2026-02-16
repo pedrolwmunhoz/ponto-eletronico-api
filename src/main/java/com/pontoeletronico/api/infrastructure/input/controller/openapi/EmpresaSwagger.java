@@ -43,7 +43,7 @@ public interface EmpresaSwagger {
             @ApiResponse(responseCode = "401", description = "Não autorizado"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    ResponseEntity<Map<String, Boolean>> configInicialStatus(@RequestHeader("Authorization") String authorization);
+    ResponseEntity<Map<String, Boolean>> configInicialStatus(@RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
     @Operation(summary = "Configuração inicial da empresa", description = "Define jornada padrão, banco de horas e geofences (opcional). usuarioId extraído do token JWT.", tags = {"Empresa"})
     @ApiResponses(value = {
@@ -89,7 +89,7 @@ public interface EmpresaSwagger {
             @ApiResponse(responseCode = "404", description = "Nenhuma métrica encontrada para a empresa"),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
-    ResponseEntity<MetricasDiariaEmpresaResponse> metricasDia(@RequestHeader("Authorization") String authorization);
+    ResponseEntity<MetricasDiariaEmpresaResponse> metricasDia(@RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
     @Operation(summary = "Listar métricas diárias por período", description = "Retorna lista de métricas diárias da empresa entre dataInicio e dataFim (inclusive). Ordenado por data_ref ASC.", tags = {"Empresa"})
     @ApiResponses(value = {
@@ -101,5 +101,6 @@ public interface EmpresaSwagger {
     ResponseEntity<List<MetricasDiariaEmpresaResponse>> metricasDiaPorPeriodo(
             @RequestHeader("Authorization") String authorization,
             @RequestParam("dataInicio") LocalDate dataInicio,
-            @RequestParam("dataFim") LocalDate dataFim);
+            @RequestParam("dataFim") LocalDate dataFim,
+            HttpServletRequest httpRequest);
 }

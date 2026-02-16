@@ -40,8 +40,6 @@ public interface AuthRepository extends JpaRepository<Users, UUID> {
                    ON hb.usuario_id = u.id AND hb.ativo = true AND hb.data_bloqueio IS NOT NULL
 
             WHERE uc.valor = :valor
-              AND uc.ativo = true
-              AND uc.data_desativacao IS NULL
             LIMIT 1
             """, nativeQuery = true)
     Optional<AuthLoginProjection> findCredencialParaLogin(@Param("valor") String valor, @Param("tipoCredencial") String tipoCredencial);

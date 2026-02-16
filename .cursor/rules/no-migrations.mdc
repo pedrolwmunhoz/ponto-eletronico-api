@@ -1,0 +1,11 @@
+---
+description: Nunca criar arquivos de migration - alterar schema direto em schema.sql
+alwaysApply: true
+---
+
+# Proibido criar migrations
+
+- **NUNCA** crie arquivos de migration (ex: `migration-*.sql`, `V*.sql`, etc.).
+- Alterações de schema devem ser feitas **diretamente** em `doc/schema.sql`.
+- Para bancos existentes, o usuário cuida das alterações manualmente.
+- Não sugerir, criar ou mencionar scripts de migration.

@@ -28,6 +28,17 @@ public interface UsuarioSwagger {
     })
     ResponseEntity<Void> atualizarPerfil(@Valid @RequestBody UsuarioPerfilAtualizarRequest request, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
+    @Operation(summary = "Atualizar email", description = "Atualiza o email primário (remove antigo e insere novo em transação). usuarioId extraído do token JWT.", tags = {"Usuario"})
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Email atualizado"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "401", description = "Token inválido"),
+            @ApiResponse(responseCode = "404", description = "Email primário não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Novo email já cadastrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    ResponseEntity<Void> atualizarEmail(@Valid @RequestBody UsuarioEmailRequest request, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
+
     @Operation(summary = "Adicionar novo email", description = "Adiciona novo email como credencial. usuarioId extraído do token JWT.", tags = {"Usuario"})
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Email adicionado"),
@@ -57,7 +68,7 @@ public interface UsuarioSwagger {
     })
     ResponseEntity<Void> adicionarTelefone(@Valid @RequestBody UsuarioTelefoneAdicionarRequest request, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
 
-    @Operation(summary = "Deletar telefone", description = "Remove telefone (soft delete). usuarioId extraído do token JWT.", tags = {"Usuario"})
+    @Operation(summary = "Deletar telefone", description = "Remove telefone (delete físico). usuarioId extraído do token JWT.", tags = {"Usuario"})
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Telefone removido"),
             @ApiResponse(responseCode = "401", description = "Token inválido"),

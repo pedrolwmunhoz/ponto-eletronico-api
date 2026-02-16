@@ -8,6 +8,7 @@ public interface EmpresaPerfilProjection {
     String getCnpj();
     String getRazaoSocial();
     String getEmail();
+    java.util.UUID getTelefoneId();
     String getCodigoPais();
     String getDdd();
     String getNumero();

@@ -5,6 +5,7 @@ import com.pontoeletronico.api.infrastructure.input.controller.openapi.FeriasAfa
 import com.pontoeletronico.api.infrastructure.input.dto.feriasafastamentos.CriarAfastamentoRequest;
 import com.pontoeletronico.api.infrastructure.input.dto.feriasafastamentos.FeriasAfastamentosListagemResponse;
 import com.pontoeletronico.api.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,9 +33,10 @@ public class FeriasAfastamentosController implements FeriasAfastamentosSwagger {
     public ResponseEntity<FeriasAfastamentosListagemResponse> listarPorFuncionario(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var funcionarioId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = feriasAfastamentosService.listarPorFuncionario(funcionarioId, page, size);
+        var response = feriasAfastamentosService.listarPorFuncionario(funcionarioId, page, size, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -44,9 +46,10 @@ public class FeriasAfastamentosController implements FeriasAfastamentosSwagger {
             @PathVariable UUID funcionarioId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = feriasAfastamentosService.listarPorFuncionarioIdEmpresa(empresaId, funcionarioId, page, size);
+        var response = feriasAfastamentosService.listarPorFuncionarioIdEmpresa(empresaId, funcionarioId, page, size, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -55,9 +58,11 @@ public class FeriasAfastamentosController implements FeriasAfastamentosSwagger {
     public ResponseEntity<FeriasAfastamentosListagemResponse> listarPorEmpresa(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestParam(required = false) String nome,
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = feriasAfastamentosService.listarPorEmpresa(empresaId, page, size);
+        var response = feriasAfastamentosService.listarPorEmpresa(empresaId, page, size, nome, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -66,9 +71,10 @@ public class FeriasAfastamentosController implements FeriasAfastamentosSwagger {
     public ResponseEntity<Void> criarAfastamento(
             @PathVariable UUID funcionarioId,
             @Valid @RequestBody CriarAfastamentoRequest request,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        feriasAfastamentosService.criarAfastamento(empresaId, funcionarioId, request);
+        feriasAfastamentosService.criarAfastamento(empresaId, funcionarioId, request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

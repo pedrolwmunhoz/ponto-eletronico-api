@@ -33,6 +33,7 @@ public class AdminController implements AdminSwagger {
     }
 
     @PostMapping("/usuarios")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public ResponseEntity<UUID> criarAdmin(@Valid @RequestBody AdminCriarRequest request, HttpServletRequest httpRequest) {
         var usuarioId = adminCriarService.criar(request, httpRequest);
         return ResponseEntity.status(201).body(usuarioId);
@@ -43,8 +44,9 @@ public class AdminController implements AdminSwagger {
     public ResponseEntity<UsuarioListagemPageResponse> listarUsuarios(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(adminListarUsuariosService.listar(authorization, page, size));
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(adminListarUsuariosService.listar(authorization, page, size, httpRequest));
     }
 
     @PostMapping("/usuario/{usuarioId}/desbloquear")

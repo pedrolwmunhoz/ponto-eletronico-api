@@ -5,8 +5,10 @@ import java.util.UUID;
 public interface FuncionarioListagemProjection {
 
     UUID getUsuarioId();
+    String getNomeCompleto();
+    String getPrimeiroNome();
+    String getUltimoNome();
     String getUsername();
-    String getTipo();
     String getEmails();
     String getTelefones();
 }

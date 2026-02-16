@@ -5,9 +5,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.io.IOException;
 
 public interface RelatoriosSwagger {
 
@@ -22,7 +25,8 @@ public interface RelatoriosSwagger {
             @Parameter(description = "Ano (ex: 2024)") @RequestParam int ano,
             @Parameter(description = "Mês (1-12)") @RequestParam int mes,
             @Parameter(description = "Formato do relatório: PDF ou EXCEL") @RequestParam FormatoRelatorio formato,
-            @RequestHeader("Authorization") String authorization);
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) throws IOException;
 
     @Operation(summary = "Relatório ponto resumo (Doc id 48)", description = "Gera relatório de ponto resumo da empresa em PDF ou Excel. Resposta comprimida com GZIP.", tags = {"Relatórios"})
     @ApiResponses(value = {
@@ -35,5 +39,6 @@ public interface RelatoriosSwagger {
             @Parameter(description = "Ano (ex: 2024)") @RequestParam int ano,
             @Parameter(description = "Mês (1-12)") @RequestParam int mes,
             @Parameter(description = "Formato do relatório: PDF ou EXCEL") @RequestParam FormatoRelatorio formato,
-            @RequestHeader("Authorization") String authorization);
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) throws IOException;
 }

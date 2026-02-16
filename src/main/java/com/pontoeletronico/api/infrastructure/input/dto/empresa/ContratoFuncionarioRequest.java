@@ -16,7 +16,7 @@ public record ContratoFuncionarioRequest(
         String pisPasep,
         
         @NotBlank(message = "cargo é obrigatório")
-        @Size(max = 255, message = "cargo deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "cargo deve ter entre 2 e 255 caracteres")
         @Schema(description = "Cargo", example = "Desenvolvedor", requiredMode = Schema.RequiredMode.REQUIRED)
         String cargo,
         

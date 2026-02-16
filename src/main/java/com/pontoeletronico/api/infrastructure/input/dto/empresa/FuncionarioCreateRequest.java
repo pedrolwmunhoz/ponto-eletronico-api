@@ -11,15 +11,25 @@ import java.util.UUID;
 @Schema(description = "Requisição de cadastro de funcionário")
 public record FuncionarioCreateRequest(
         @NotBlank(message = "username é obrigatório")
-        @Size(max = 255, message = "username deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único do funcionário", example = "joao.silva", requiredMode = Schema.RequiredMode.REQUIRED)
         String username,
         
         @NotBlank(message = "nomeCompleto é obrigatório")
-        @Size(max = 255, message = "nomeCompleto deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "nomeCompleto deve ter entre 2 e 255 caracteres")
         @Schema(description = "Nome completo", example = "João da Silva", requiredMode = Schema.RequiredMode.REQUIRED)
         String nomeCompleto,
+
+        @NotBlank(message = "primeiroNome é obrigatório")
+        @Size(min = 2, max = 100, message = "primeiroNome deve ter entre 2 e 100 caracteres")
+        @Schema(description = "Primeiro nome", example = "João", requiredMode = Schema.RequiredMode.REQUIRED)
+        String primeiroNome,
+
+        @NotBlank(message = "ultimoNome é obrigatório")
+        @Size(min = 2, max = 100, message = "ultimoNome deve ter entre 2 e 100 caracteres")
+        @Schema(description = "Último nome", example = "Silva", requiredMode = Schema.RequiredMode.REQUIRED)
+        String ultimoNome,
         
         @NotBlank(message = "cpf é obrigatório")
         @Pattern(regexp = "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$", message = "CPF inválido")

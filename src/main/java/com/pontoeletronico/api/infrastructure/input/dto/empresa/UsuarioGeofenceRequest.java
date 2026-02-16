@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 @Schema(description = "Geofence do funcionário (ex: home office)")
 public record UsuarioGeofenceRequest(
         @NotBlank(message = "descricao é obrigatória")
-        @Size(max = 255, message = "descricao deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "descricao deve ter entre 2 e 255 caracteres")
         @Schema(description = "Descrição do local", example = "Home Office", requiredMode = Schema.RequiredMode.REQUIRED)
         String descricao,
         

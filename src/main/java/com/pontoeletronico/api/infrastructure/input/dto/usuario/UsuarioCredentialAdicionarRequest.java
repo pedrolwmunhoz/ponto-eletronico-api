@@ -10,6 +10,6 @@ public record UsuarioCredentialAdicionarRequest(
         Integer tipoCredencialId,
 
         @NotBlank(message = "Valor é obrigatório")
-        @Size(max = 255)
+        @Size(min = 2, max = 255, message = "valor deve ter entre 2 e 255 caracteres")
         String valor
 ) {}

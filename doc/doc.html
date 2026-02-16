@@ -946,11 +946,14 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 title: "1. Funcionário (Employee)",
                 desc: "Dados completos para operação, folha e regras individuais. Inclui controle de jornada e banco de horas.",
                 json: `// ─── TABELA: identificacao_funcionario ───
+// Listagens exibem apenas primeiroNome + ultimoNome. Cadastro: nomeCompleto primeiro; front auto-preenche primeiro/ultimo em tempo real.
 {
   "id": "UUID (PK)",
   "funcionarioId": "UUID (FK → users.id, NOT NULL, UNIQUE)",
   "empresaId": "UUID (FK → users.id, NOT NULL)",
   "nomeCompleto": "String (NOT NULL)",
+  "primeiroNome": "String (NOT NULL) - primeira palavra do nome_completo",
+  "ultimoNome": "String (NOT NULL) - última palavra do nome_completo",
   "cpf": "String (NOT NULL, UNIQUE)",
   "codigoPonto": "Integer (NOT NULL, Max: 999999)",
   "dataNascimento": "DATE (Nullable), ex: yyyy-MM-dd",
@@ -966,15 +969,13 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
 }
 
 // ─── TABELA: usuario_telefone ───
-// Nota: Esta tabela é compartilhada entre funcionários e empresas. Duplicada aqui apenas para visualização.
+// Nota: Esta tabela é compartilhada entre funcionários e empresas. Delete físico (sem ativo/data_desativacao).
 {
   "id": "UUID (PK)",
   "usuarioId": "UUID (FK → users.id, NOT NULL)",
   "codigoPais": "String (NOT NULL)",
   "ddd": "String (NOT NULL)",
   "numero": "String (NOT NULL)",
-  "ativo": "Boolean (NOT NULL, Default: true)",
-  "dataDesativacao": "TIMESTAMP (Nullable), ex: DD-MM-YYYY HH:mm:ss",
   "UNIQUE(codigoPais, ddd, numero)"
 }
 
@@ -1080,15 +1081,13 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "updatedAt": "TIMESTAMP (NOT NULL), ex: DD-MM-YYYY HH:mm:ss"
 }
 
-// ─── TABELA: usuario_telefone ───
+// ─── TABELA: usuario_telefone ─── (Delete físico)
 {
   "id": "UUID (PK)",
   "usuarioId": "UUID (FK → users.id, NOT NULL)",
   "codigoPais": "String (NOT NULL)",
   "ddd": "String (NOT NULL)",
   "numero": "String (NOT NULL)",
-  "ativo": "Boolean (NOT NULL, Default: true)",
-  "dataDesativacao": "TIMESTAMP (Nullable), ex: DD-MM-YYYY HH:mm:ss",
   "UNIQUE(codigoPais, ddd, numero)"
 }
 
@@ -1323,15 +1322,13 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             credencial: {
                 title: "4. User Credential (Login)",
                 desc: "Armazena credenciais de autenticação para funcionários e empresas. Senha sempre em hash. categoriaCredentialId indica se é PRIMARIO (principal) ou SECUNDARIO (adicional).",
-                json: `// ─── TABELA: user_credential ───
+                json: `// ─── TABELA: user_credential ─── (Delete físico; sem ativo/data_desativacao)
 {
   "id": "UUID (PK)",
   "usuarioId": "UUID (FK → users.id, NOT NULL)",
   "tipoCredencialId": "Integer (FK → tipo_credential.id, NOT NULL)", // Valores em tipo_credential: EMAIL, TELEFONE, CPF, CNPJ, USERNAME
   "categoriaCredentialId": "Integer (FK → tipo_categoria_credential.id, NOT NULL, Default: PRIMARIO)", // Valores: PRIMARIO, SECUNDARIO
-  "valor": "String (NOT NULL, UNIQUE)",
-  "ativo": "Boolean (NOT NULL, Default: true)",
-  "dataDesativacao": "TIMESTAMP (Nullable), ex: yyyy-MM-dd HH:mm:ss"
+  "valor": "String (NOT NULL, UNIQUE)"
 }
 
 // ─── TABELA: user_password ─── (Senha única por usuário, não por credencial. Nunca UPDATE. Desativar antiga + inserir nova.)
@@ -1593,7 +1590,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             },
             feriado: {
                 title: "9. Feriado",
-                desc: "Cadastro de feriados com tipo (Nacional, Estadual, Municipal). Usado para cálculo de ocorrência do dia (ex.: FERIADO no resumo de ponto) e regras de jornada. empresa_id NULL = abrangência conforme tipo_feriado; preenchido = feriado específico da empresa.",
+                desc: "Cadastro de feriados com tipo (Nacional, Estadual, Municipal). Usado para cálculo de ocorrência do dia (ex.: FERIADO no resumo de ponto) e regras de jornada. usuario_id = usuário que criou (empresa ou admin). Listagem empresa: feriados da empresa + feriados criados por Admin (join users.tipo_usuario_id = ADMIN). Restrição: Empresa só pode cadastrar ESTADUAL ou MUNICIPAL; NACIONAL é exclusivo do admin.",
                 json: `// ─── TABELA: tipo_feriado ───
 // Catálogo: NACIONAL | ESTADUAL | MUNICIPAL (abrangência do feriado).
 {
@@ -1608,12 +1605,11 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "data": "DATE (NOT NULL), ex: yyyy-MM-dd - dia do feriado",
   "descricao": "String (NOT NULL)", // Ex.: Natal, Ano Novo, Feriado Municipal
   "tipoFeriadoId": "Integer (FK → tipo_feriado.id, NOT NULL)", // NACIONAL, ESTADUAL ou MUNICIPAL
-  "tipoUsuarioId": "Integer (FK → tipo_usuario.id, Nullable)", // Opcional: restringe a um tipo de usuário (ex.: EMPRESA)
-  "empresaId": "UUID (FK → users.id, Nullable)", // Nullable = feriado de abrangência (tipo); preenchido = feriado específico da empresa
+  "usuarioId": "UUID (FK → users.id, NOT NULL)", // Usuário que criou (empresa ou admin). Preenchido no service a partir do JWT.",
   "ativo": "Boolean (NOT NULL, Default: true)",
   "createdAt": "TIMESTAMP (NOT NULL), ex: DD-MM-YYYY HH:mm:ss",
   "INDEX(data)",
-  "INDEX(empresaId, data)"
+  "INDEX(usuarioId, data)"
 }`
             }
         };
@@ -1952,7 +1948,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                     },
                     geofenceIds: 'Array<UUID> (opcional). IDs dos geofences já cadastrados pela empresa. Funcionário não cadastra geofence; apenas associa-se aos geofences da empresa (grava em xref_geofence_funcionarios).'
                 },
-                notes: 'Obrigatórios: username, nomeCompleto, cpf, email, senha. Opcionais: dataNascimento, usuarioTelefone, contratoFuncionario, jornadaFuncionarioConfig, geofenceIds (podem ser omitidos no cadastro inicial). Quando enviados, são validados antes do insert (ex: tipoContratoId/tipoEscalaJornadaId existem, telefone/matrícula/PIS não duplicados). Geofences: apenas IDs dos geofences cadastrados pela empresa (tabela xref_geofence_funcionarios).'
+                notes: 'Obrigatórios: username, nomeCompleto, cpf, email, senha. Cadastro: nomeCompleto primeiro; backend extrai primeiro_nome e ultimo_nome (primeira/última palavra). Front pode auto-preencher inputs de primeiro/último em tempo real. Opcionais: dataNascimento, usuarioTelefone, contratoFuncionario, jornadaFuncionarioConfig, geofenceIds (podem ser omitidos no cadastro inicial). Quando enviados, são validados antes do insert (ex: tipoContratoId/tipoEscalaJornadaId existem, telefone/matrícula/PIS não duplicados). Geofences: apenas IDs dos geofences cadastrados pela empresa (tabela xref_geofence_funcionarios).'
             },
             {
                 id: 15,
@@ -2074,10 +2070,10 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                         paginaAtual: 'Integer'
                     },
                     conteudo: [
-                        { usuarioId: 'UUID', username: 'String', tipo: 'String', emails: 'List<String>', telefones: 'List<{codigoPais, ddd, numero}>' }
+                        { usuarioId: 'UUID', primeiroNome: 'String', ultimoNome: 'String', username: 'String', emails: 'List<String>', telefones: 'List<{codigoPais, ddd, numero}>' }
                     ]
                 },
-                notes: 'Empresa só tem acesso aos funcionários dela mesma.'
+                notes: 'Empresa só tem acesso aos funcionários dela mesma. Listagens exibem apenas primeiroNome + ultimoNome.'
             },
             ],
             // #endregion
@@ -2446,10 +2442,10 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 id: 38,
                 method: 'GET',
                 url: '/api/empresa/solicitacoes-ponto',
-                description: 'Listar todas as solicitações de ponto dos funcionários (criar/excluir registro manual)',
+                description: 'Listar todas as solicitações de ponto dos funcionários (criar/excluir registro manual). Filtro opcional por nome do funcionário.',
                 auth: true,
                 observacao: 'usuarioId da empresa extraído do token JWT no backend',
-                params: 'page, size (query)',
+                params: 'page, size, nome (opcional, query)',
                 statusCode: '200 (OK). 400 Bad Request, 401 Unauthorized',
                 response: {
                     items: [
@@ -2492,6 +2488,29 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                     motivo: 'String (NOT NULL)',
                     observacao: 'String (Nullable)'
                 }
+            },
+            {
+                id: '40b',
+                method: 'GET',
+                url: '/api/empresa/espelho-ponto/listagem',
+                description: 'Listagem espelho de ponto — funcionários da empresa com nome e todos os totais mensais',
+                auth: true,
+                observacao: 'usuarioId da empresa extraído do token JWT no backend. Somente para empresa.',
+                params: 'page, pageSize, nome (opcional), ano (opcional, default mês atual), mes (opcional, default mês atual)',
+                statusCode: '200 (OK). 401 Unauthorized, 500 Erro interno',
+                response: {
+                    paginacao: '{ totalPaginas, totalElementos, totalElementosPaginaAtual, paginaAtual }',
+                    conteudo: [
+                        {
+                            usuarioId: 'UUID',
+                            nomeCompleto: 'String (exibição: primeiro + último nome)',
+                            totalHorasEsperadas: 'String (HH:mm)',
+                            totalHorasTrabalhadas: 'String (HH:mm)',
+                            totalHorasTrabalhadasFeriado: 'String (HH:mm)'
+                        }
+                    ]
+                },
+                notes: 'Empresa só tem acesso aos funcionários dela mesma. Totais do mês referência (ano/mes).'
             },
             ],
             // #endregion
@@ -2548,10 +2567,10 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 id: 43,
                 method: 'GET',
                 url: '/api/empresa/ferias-afastamentos',
-                description: 'Listar férias e afastamentos da empresa',
+                description: 'Listar férias e afastamentos da empresa. Filtro opcional por nome do funcionário.',
                 auth: true,
                 observacao: 'usuarioId da empresa extraído do token JWT no backend',
-                params: 'page, size (query)',
+                params: 'page, size, nome (opcional, query)',
                 statusCode: '200 (OK). 400 Bad Request, 401 Unauthorized',
                 response: {
                     items: [
@@ -2677,6 +2696,71 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             },
             ],
             // #endregion
+            // #region Feriados
+            feriados: [
+            {
+                id: 57,
+                method: 'GET',
+                url: '/api/empresa/feriados',
+                description: 'Listar feriados da empresa',
+                auth: true,
+                observacao: 'Inclui feriados criados pela empresa + feriados criados por Admin (join users). empresaId do JWT.',
+                params: 'page (default 0), size (default 20)',
+                statusCode: '200 (OK). 401 Unauthorized',
+                response: {
+                    paginacao: 'Object (totalPaginas, totalElementos, totalElementosPaginaAtual, paginaAtual)',
+                    conteudo: 'Array<{ id, data, descricao, tipoFeriadoId, tipoFeriadoDescricao, ativo, createdAt }>'
+                }
+            },
+            {
+                id: 58,
+                method: 'POST',
+                url: '/api/empresa/feriados',
+                description: 'Criar novo feriado para a empresa',
+                auth: true,
+                observacao: 'empresaId extraído do token JWT no backend',
+                statusCode: '201 (Created). 400 Bad Request, 401 Unauthorized',
+                response: 'Sem corpo. Mensagem de sucesso ou erro.',
+                body: {
+                    data: 'LocalDate (NOT NULL), ex: yyyy-MM-dd',
+                    descricao: 'String (NOT NULL, max 255)',
+                    tipoFeriadoId: 'Integer (NOT NULL, FK → tipo_feriado.id)',
+                    tipoUsuarioId: 'Integer (Nullable, FK → tipo_usuario.id)',
+                    ativo: 'Boolean (Default: true)'
+                },
+                notes: 'Empresa pode cadastrar apenas ESTADUAL ou MUNICIPAL. NACIONAL é exclusivo do admin.'
+            },
+            {
+                id: 59,
+                method: 'PUT',
+                url: '/api/empresa/feriados/:feriadoId',
+                description: 'Editar feriado existente',
+                auth: true,
+                observacao: 'Empresa só edita feriados criados por ela (usuario_id = usuário do token)',
+                params: 'feriadoId (UUID) no path',
+                statusCode: '200 (OK). 400 Bad Request, 401 Unauthorized, 404 Not Found',
+                response: 'Sem corpo. Mensagem de sucesso ou erro.',
+                body: {
+                    data: 'LocalDate (NOT NULL)',
+                    descricao: 'String (NOT NULL, max 255)',
+                    tipoFeriadoId: 'Integer (NOT NULL)',
+                    ativo: 'Boolean (Default: true)'
+                },
+                notes: 'Empresa pode editar apenas para ESTADUAL ou MUNICIPAL.'
+            },
+            {
+                id: 60,
+                method: 'DELETE',
+                url: '/api/empresa/feriados/:feriadoId',
+                description: 'Excluir feriado (soft delete)',
+                auth: true,
+                observacao: 'Feriado deve pertencer à empresa do token. Define ativo=false.',
+                params: 'feriadoId (UUID) no path',
+                statusCode: '204 (No Content). 401 Unauthorized, 404 Not Found',
+                response: 'Sem corpo.'
+            },
+            ],
+            // #endregion
             // #region Relatórios
             relatorios: [
             {
@@ -2793,6 +2877,96 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             },
             ],
             // #endregion
+            // #region Admin Feriados
+            adminFeriados: [
+            {
+                id: 61,
+                method: 'GET',
+                url: '/api/admin/feriados',
+                description: 'Admin: Listar feriados de abrangência',
+                auth: true,
+                observacao: 'JWT admin. Feriados criados por Admin (join users.tipo_usuario_id = ADMIN). NACIONAL, ESTADUAL, MUNICIPAL.',
+                params: 'page (default 0), size (default 20)',
+                statusCode: '200 (OK). 401 Unauthorized, 403 Forbidden',
+                response: { paginacao: 'Object', conteudo: 'Array<FeriadoItemResponse>' }
+            },
+            {
+                id: 62,
+                method: 'POST',
+                url: '/api/admin/feriados',
+                description: 'Admin: Criar feriado de abrangência',
+                auth: true,
+                observacao: 'JWT admin. usuarioId preenchido no backend a partir do JWT. Qualquer tipo: NACIONAL, ESTADUAL, MUNICIPAL.',
+                statusCode: '201 (Created). 400 Bad Request, 401 Unauthorized, 403 Forbidden',
+                response: 'Sem corpo.',
+                body: { data: 'LocalDate', descricao: 'String', tipoFeriadoId: 'Integer', ativo: 'Boolean' }
+            },
+            {
+                id: 63,
+                method: 'PUT',
+                url: '/api/admin/feriados/:feriadoId',
+                description: 'Admin: Editar feriado de abrangência',
+                auth: true,
+                params: 'feriadoId (UUID) no path',
+                statusCode: '200 (OK). 401 Unauthorized, 403 Forbidden, 404 Not Found',
+                response: 'Sem corpo.',
+                body: { data: 'LocalDate', descricao: 'String', tipoFeriadoId: 'Integer', ativo: 'Boolean' }
+            },
+            {
+                id: 64,
+                method: 'DELETE',
+                url: '/api/admin/feriados/:feriadoId',
+                description: 'Admin: Excluir feriado de abrangência',
+                auth: true,
+                params: 'feriadoId (UUID) no path',
+                statusCode: '204 (No Content). 401 Unauthorized, 403 Forbidden, 404 Not Found',
+                response: 'Sem corpo.'
+            },
+            {
+                id: 65,
+                method: 'GET',
+                url: '/api/admin/empresas/:empresaId/feriados',
+                description: 'Admin: Listar feriados por empresa',
+                auth: true,
+                observacao: 'JWT admin. empresaId no path.',
+                params: 'empresaId (UUID) no path; page, size (query)',
+                statusCode: '200 (OK). 401 Unauthorized, 403 Forbidden, 404 Empresa não encontrada',
+                response: { paginacao: 'Object', conteudo: 'Array<FeriadoItemResponse>' }
+            },
+            {
+                id: 66,
+                method: 'POST',
+                url: '/api/admin/empresas/:empresaId/feriados',
+                description: 'Admin: Criar feriado por empresa',
+                auth: true,
+                params: 'empresaId (UUID) no path. usuario_id = empresaId.',
+                statusCode: '201 (Created). 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Empresa não encontrada',
+                response: 'Sem corpo.',
+                body: { data: 'LocalDate', descricao: 'String', tipoFeriadoId: 'Integer', ativo: 'Boolean' }
+            },
+            {
+                id: 67,
+                method: 'PUT',
+                url: '/api/admin/empresas/:empresaId/feriados/:feriadoId',
+                description: 'Admin: Editar feriado por empresa',
+                auth: true,
+                params: 'empresaId, feriadoId (UUID) no path',
+                statusCode: '200 (OK). 401 Unauthorized, 403 Forbidden, 404 Not Found',
+                response: 'Sem corpo.',
+                body: { data: 'LocalDate', descricao: 'String', tipoFeriadoId: 'Integer', ativo: 'Boolean' }
+            },
+            {
+                id: 68,
+                method: 'DELETE',
+                url: '/api/admin/empresas/:empresaId/feriados/:feriadoId',
+                description: 'Admin: Excluir feriado por empresa',
+                auth: true,
+                params: 'empresaId, feriadoId (UUID) no path',
+                statusCode: '204 (No Content). 401 Unauthorized, 403 Forbidden, 404 Not Found',
+                response: 'Sem corpo.'
+            },
+            ],
+            // #endregion
             // #region Admin
             admin: [
             {
@@ -2863,8 +3037,10 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             registroPonto: 'Registro-ponto (funcionário)',
             funcionarioBancoHoras: 'Funcionário (banco-horas)',
             geofences: 'Geofences',
+            feriados: 'Feriados',
             relatorios: 'Relatórios',
             auditoria: 'Auditoria',
+            adminFeriados: 'Admin - Feriados',
             perfil: 'Perfil (empresa, funcionário)',
             usuarios: 'Usuários',
             usuarioBancoHoras: 'Usuario (banco-horas)'

@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Size;
 public record LoginRequest(
         
         @NotBlank(message = "valor é obrigatório")
+        @Size(min = 2, max = 255, message = "valor deve ter entre 2 e 255 caracteres")
         @Schema(description = "Valor da credencial (email, CPF ou username)", example = "usuario@email.com")
         String valor,
         

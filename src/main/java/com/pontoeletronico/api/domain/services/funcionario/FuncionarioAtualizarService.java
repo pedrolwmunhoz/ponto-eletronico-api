@@ -110,17 +110,19 @@ public class FuncionarioAtualizarService {
             throw new TipoCredencialNaoEncontradoException();
         }
 
-        // IDENTIFICAÇÃO (nomeCompleto, cpf, dataNascimento): atualizar só se algum for enviado – merge com atuais
+        // IDENTIFICAÇÃO (nomeCompleto, primeiroNome, ultimoNome, cpf, dataNascimento): atualizar só se algum for enviado – merge com atuais
         var cpfAtual = identificacaoFuncionarioRepository.findCpfByFuncionarioId(funcionarioId).orElse(null);
-        if (request.nomeCompleto() != null || request.cpf() != null || request.dataNascimento() != null) {
+        if (request.nomeCompleto() != null || request.primeiroNome() != null || request.ultimoNome() != null || request.cpf() != null || request.dataNascimento() != null) {
             var nomeCompleto = request.nomeCompleto() != null ? request.nomeCompleto() : (identificacaoAtual != null ? identificacaoAtual.getNomeCompleto() : null);
+            var primeiroNome = request.primeiroNome() != null ? request.primeiroNome() : (identificacaoAtual != null ? identificacaoAtual.getPrimeiroNome() : null);
+            var ultimoNome = request.ultimoNome() != null ? request.ultimoNome() : (identificacaoAtual != null ? identificacaoAtual.getUltimoNome() : null);
             var cpfNormalizado = request.cpf() != null ? request.cpf().replaceAll("\\D", "") : (identificacaoAtual != null ? identificacaoAtual.getCpf() : null);
             var dataNascimento = request.dataNascimento() != null ? request.dataNascimento() : (identificacaoAtual != null ? identificacaoAtual.getDataNascimento() : null);
             if (cpfNormalizado != null && identificacaoFuncionarioRepository.existsByCpfAndFuncionarioIdNot(cpfNormalizado, funcionarioId).isPresent()) {
                 auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_ATUALIZAR_FUNCIONARIO, "Atualizar funcionário", null, null, false, "CPF já cadastrado.", dataAtual, httpRequest);
                 throw new ConflitoException("CPF já cadastrado.");
             }
-            identificacaoFuncionarioRepository.updateByFuncionarioId(funcionarioId, nomeCompleto, cpfNormalizado, dataNascimento, dataAtual);
+            identificacaoFuncionarioRepository.updateByFuncionarioId(funcionarioId, nomeCompleto, primeiroNome, ultimoNome, cpfNormalizado, dataNascimento, dataAtual);
         }
         // CPF (credencial): atualizar só se cpf foi enviado e mudou
         if (request.cpf() != null && tipoCpfId != null) {
@@ -131,17 +133,18 @@ public class FuncionarioAtualizarService {
                     auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_ATUALIZAR_FUNCIONARIO, "Atualizar funcionário", null, null, false, "CPF já cadastrado.", dataAtual, httpRequest);
                     throw new ConflitoException("CPF já cadastrado.");
                 }
-                var credencialCpfAntiga = userCredentialRepository.findCredencialIdByUsuarioAndTipo(funcionarioId, tipoCpfId);
-                if (credencialCpfAntiga.isPresent()) {
-                    userCredentialRepository.desativar(credencialCpfAntiga.get(), funcionarioId, dataAtual);
+                var credencialCpfId = userCredentialRepository.findCredencialIdByUsuarioAndTipo(funcionarioId, tipoCpfId);
+                if (credencialCpfId.isPresent()) {
+                    userCredentialRepository.updateValor(credencialCpfId.get(), funcionarioId, cpfNormalizadoNovo);
+                } else {
+                    userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoCpfId, categoriaPrimarioId, cpfNormalizadoNovo);
                 }
-                userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoCpfId, categoriaPrimarioId, cpfNormalizadoNovo);
             }
         }
 
-        // TELEFONE: só se enviado – desativar antigos e adicionar novo (conjunto validado inteiro via @Valid)
+        // TELEFONE: só se enviado – deletar antigos e adicionar novo (conjunto validado inteiro via @Valid)
         if (request.usuarioTelefone() != null) {
-            usuarioTelefoneRepository.desativarAllByUsuarioId(funcionarioId, dataAtual);
+            usuarioTelefoneRepository.deleteAllByUsuarioId(funcionarioId);
             var usuarioTelefone = request.usuarioTelefone();
             usuarioTelefoneRepository.insert(UUID.randomUUID(), funcionarioId, usuarioTelefone.codigoPais(), usuarioTelefone.ddd(), usuarioTelefone.numero());
         }

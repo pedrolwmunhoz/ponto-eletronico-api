@@ -10,13 +10,13 @@ import jakarta.validation.constraints.Size;
 public record EmpresaEnderecoRequest(
         
         @NotBlank(message = "rua é obrigatória")
-        @Size(max = 255, message = "rua deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "rua deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[\\p{L}0-9\\s\\p{Punct}]+$", message = "rua: apenas letras, números, espaços e pontuação")
         @Schema(description = "Rua", example = "Av. Paulista", requiredMode = Schema.RequiredMode.REQUIRED)
         String rua,
         
         @NotBlank(message = "numero é obrigatório")
-        @Size(max = 20, message = "numero deve ter no máximo 20 caracteres")
+        @Size(min = 1, max = 20, message = "numero deve ter entre 1 e 20 caracteres")
         @Pattern(regexp = "^[0-9]+$", message = "numero: apenas números")
         @Schema(description = "Número", example = "1000", requiredMode = Schema.RequiredMode.REQUIRED)
         String numero,
@@ -27,13 +27,13 @@ public record EmpresaEnderecoRequest(
         String complemento,
         
         @NotBlank(message = "bairro é obrigatório")
-        @Size(max = 255, message = "bairro deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "bairro deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[\\p{L}0-9\\s\\p{Punct}]+$", message = "bairro: apenas letras, números, espaços e pontuação")
         @Schema(description = "Bairro", example = "Bela Vista", requiredMode = Schema.RequiredMode.REQUIRED)
         String bairro,
         
         @NotBlank(message = "cidade é obrigatória")
-        @Size(max = 255, message = "cidade deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "cidade deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[\\p{L}0-9\\s\\p{Punct}]+$", message = "cidade: apenas letras, números, espaços e pontuação")
         @Schema(description = "Cidade", example = "São Paulo", requiredMode = Schema.RequiredMode.REQUIRED)
         String cidade,

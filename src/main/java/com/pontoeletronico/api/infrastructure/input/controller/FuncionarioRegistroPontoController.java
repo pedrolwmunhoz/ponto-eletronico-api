@@ -1,5 +1,6 @@
 package com.pontoeletronico.api.infrastructure.input.controller;
 
+import com.pontoeletronico.api.domain.services.audit.AuditoriaRegistroAsyncService;
 import com.pontoeletronico.api.domain.services.registro.FuncionarioRegistroPontoService;
 import com.pontoeletronico.api.infrastructure.input.controller.openapi.FuncionarioRegistroPontoSwagger;
 import com.pontoeletronico.api.infrastructure.input.dto.registro.*;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,12 +23,16 @@ import java.util.UUID;
 @RequestMapping("/api")
 public class FuncionarioRegistroPontoController implements FuncionarioRegistroPontoSwagger {
 
+    private static final String ACAO_LISTAGEM_PONTO_PROPRIO = "ACESSO_LISTAGEM_PONTO_PROPRIO";
+
     private final FuncionarioRegistroPontoService registroPontoService;
     private final JwtUtil jwtUtil;
+    private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
 
-    public FuncionarioRegistroPontoController(FuncionarioRegistroPontoService registroPontoService, JwtUtil jwtUtil) {
+    public FuncionarioRegistroPontoController(FuncionarioRegistroPontoService registroPontoService, JwtUtil jwtUtil, AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
         this.registroPontoService = registroPontoService;
         this.jwtUtil = jwtUtil;
+        this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
 
     @GetMapping("/funcionario/{funcionarioId}/ponto")
@@ -41,6 +47,7 @@ public class FuncionarioRegistroPontoController implements FuncionarioRegistroPo
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         var response = registroPontoService.listarPontoFuncionario(funcionarioId, ano, mes, httpRequest);
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(funcionarioId, ACAO_LISTAGEM_PONTO_PROPRIO, "Listagem de ponto (próprio)", null, null, true, null, LocalDateTime.now(), httpRequest);
         return ResponseEntity.ok(response);
     }
 

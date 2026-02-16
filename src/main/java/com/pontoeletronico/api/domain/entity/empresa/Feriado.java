@@ -26,11 +26,8 @@ public class Feriado {
     @Column(name = "tipo_feriado_id", nullable = false)
     private Integer tipoFeriadoId;
 
-    @Column(name = "tipo_usuario_id")
-    private Integer tipoUsuarioId;
-
-    @Column(name = "empresa_id")
-    private UUID empresaId;
+    @Column(name = "usuario_id", nullable = false)
+    private UUID usuarioId;
 
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;

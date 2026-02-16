@@ -167,13 +167,13 @@ public class FuncionarioCriarService {
         }
         identificacaoFuncionarioRepository.insert(
                 UUID.randomUUID(), funcionarioId, empresaId,
-                request.nomeCompleto(), cpfNormalizado, codigoPonto,
+                request.nomeCompleto(), request.primeiroNome(), request.ultimoNome(), cpfNormalizado, codigoPonto,
                 request.dataNascimento(), dataCriacao);
         funcionarioRegistroLockRepository.insert(funcionarioId, empresaId);
 
         if (request.usuarioTelefone() != null) {
             var telefone = request.usuarioTelefone();
-            if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumeroAndAtivo(telefone.codigoPais(), telefone.ddd(), telefone.numero()).isPresent()) {
+            if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumero(telefone.codigoPais(), telefone.ddd(), telefone.numero()).isPresent()) {
                 registrarAuditoria(empresaId, funcionarioId, false, MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem(), dataCriacao, httpRequest);
                 throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
             }

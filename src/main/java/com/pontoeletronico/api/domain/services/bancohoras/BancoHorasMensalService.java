@@ -42,19 +42,23 @@ public class BancoHorasMensalService {
         BancoHorasMensal mensal = obterOuCriarMensal(funcionarioId, empresaId, ano, mes);
         mensal.setTotalHorasEsperadas(Duration.ZERO);
         mensal.setTotalHorasTrabalhadas(Duration.ZERO);
+        mensal.setTotalHorasTrabalhadasFeriado(Duration.ZERO);
 
         List<ResumoPontoDia> jornadas = resumoPontoDiaRepository
                 .findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscCreatedAtAsc(funcionarioId, inicio, fim);
 
         Duration somaEsperadas = Duration.ZERO;
         Duration somaTrabalhadas = Duration.ZERO;
+        Duration somaTrabalhadasFeriado = Duration.ZERO;
         for (ResumoPontoDia r : jornadas) {
             somaEsperadas = somaEsperadas.plus(Objects.requireNonNullElse(r.getTotalHorasEsperadas(), Duration.ZERO));
             somaTrabalhadas = somaTrabalhadas.plus(Objects.requireNonNullElse(r.getTotalHorasTrabalhadas(), Duration.ZERO));
+            somaTrabalhadasFeriado = somaTrabalhadasFeriado.plus(Objects.requireNonNullElse(r.getTotalHorasTrabalhadasFeriado(), Duration.ZERO));
         }
 
         mensal.setTotalHorasEsperadas(somaEsperadas);
         mensal.setTotalHorasTrabalhadas(somaTrabalhadas);
+        mensal.setTotalHorasTrabalhadasFeriado(somaTrabalhadasFeriado);
         bancoHorasMensalRepository.save(mensal);
     }
 
@@ -86,6 +90,7 @@ public class BancoHorasMensalService {
                     novo.setAnoRef(ano);
                     novo.setTotalHorasEsperadas(Duration.ZERO);
                     novo.setTotalHorasTrabalhadas(Duration.ZERO);
+                    novo.setTotalHorasTrabalhadasFeriado(Duration.ZERO);
                     novo.setInconsistente(false);
                     novo.setMotivoInconsistencia(null);
                     novo.setAtivo(true);

@@ -8,7 +8,6 @@ import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.AfastamentoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.FeriadoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoAfastamentoRepository;
-import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoUsuarioRepository;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -18,7 +17,9 @@ import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 
+@Service
 @AllArgsConstructor
 public class CalcularResumoDiaUtils {
 
@@ -26,7 +27,6 @@ public class CalcularResumoDiaUtils {
     private final AfastamentoRepository afastamentoRepository;
     private final TipoAfastamentoRepository tipoAfastamentoRepository;
     private final FeriadoRepository feriadoRepository;
-    private final TipoUsuarioRepository tipoUsuarioRepository;
 
     public void recalcularResumoDoDia(ResumoPontoDia resumo, List<RegistroPonto> registros, JornadaConfig config) {
         if (registros.isEmpty()) return;
@@ -69,21 +69,7 @@ public class CalcularResumoDiaUtils {
     }
 
     private void calcularHoraFeriado(ResumoPontoDia resumo, UUID empresaId, LocalDateTime dataInicio, LocalDateTime dataFim, List<RegistroPonto> registros) {
-
-        var tipoUsuarioId = tipoUsuarioRepository.findIdByDescricao("ADMIN");
-        var listaFeriadosApp = feriadoRepository.findByDataBetweenAndAtivoTrueAndTipoUsuarioId(dataInicio, dataFim, tipoUsuarioId);
-        var listaFeriadosEmpresa = feriadoRepository.findByDataBetweenAndEmpresaIdAndAtivoTrue(dataInicio, dataFim, empresaId);
-
-        // Junta os feriados de app e empresa, removendo os que têm datas repetidas
-        var listaFeriados = new ArrayList<Feriado>();
-        listaFeriados.addAll(listaFeriadosApp);
-        for (Feriado fEmpresa : listaFeriadosEmpresa) {
-            boolean dataJaExiste = listaFeriados.stream()
-                .anyMatch(fApp -> fApp.getData().isEqual(fEmpresa.getData()));
-            if (!dataJaExiste) {
-                listaFeriados.add(fEmpresa);
-            }
-        }
+        var listaFeriados = feriadoRepository.findByDataBetweenAndAtivoTrueForEmpresa(dataInicio, dataFim, empresaId);
 
         Duration totalHorasTrabalhadasFeriado = Duration.ZERO;
 

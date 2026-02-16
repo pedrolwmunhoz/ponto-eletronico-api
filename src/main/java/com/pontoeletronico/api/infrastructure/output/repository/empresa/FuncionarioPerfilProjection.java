@@ -9,6 +9,8 @@ public interface FuncionarioPerfilProjection {
     String getUsername();
     Boolean getFuncionarioAtivo();
     String getNomeCompleto();
+    String getPrimeiroNome();
+    String getUltimoNome();
     String getCpf();
     LocalDate getDataNascimento();
     String getMatricula();

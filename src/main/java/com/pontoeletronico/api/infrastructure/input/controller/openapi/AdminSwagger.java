@@ -36,7 +36,8 @@ public interface AdminSwagger {
     ResponseEntity<UsuarioListagemPageResponse> listarUsuarios(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size);
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest);
 
     @Operation(summary = "Desbloquear usuário", description = "Desativa bloqueio de qualquer usuário. Requer JWT de administrador.", tags = {"Admin"})
     @ApiResponses(value = {

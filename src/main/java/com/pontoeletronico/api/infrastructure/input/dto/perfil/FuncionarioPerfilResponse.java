@@ -11,6 +11,8 @@ public record FuncionarioPerfilResponse(
         String username,
         Boolean funcionarioAtivo,
         String nomeCompleto,
+        String primeiroNome,
+        String ultimoNome,
         String cpf,
         LocalDate dataNascimento,
         String matricula,

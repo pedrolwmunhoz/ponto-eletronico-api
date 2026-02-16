@@ -8,14 +8,23 @@ server:
 spring:
   application:
     name: ponto-eletronico-api
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/ponto_db
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0&sslmode=require
+    username: postgres.tnlgxtcyfurrutpimbbs
+    password: atheCobol4ever.@1
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+
   jpa:
     hibernate:
       ddl-auto: none
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-feriado.sql
 
 jwt:
   public.key: classpath:keys/app.pub

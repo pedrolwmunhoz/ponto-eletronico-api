@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
 public record EmpresaCreateRequest(
         
         @NotBlank(message = "username é obrigatório")
-        @Size(max = 255, message = "username deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único da empresa", example = "empresa-acme", requiredMode = Schema.RequiredMode.REQUIRED)
         String username,
@@ -31,7 +31,7 @@ public record EmpresaCreateRequest(
         String senha,
         
         @NotBlank(message = "razaoSocial é obrigatória")
-        @Size(max = 255, message = "razaoSocial deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "razaoSocial deve ter entre 2 e 255 caracteres")
         @Schema(description = "Razão social", example = "Acme Ltda", requiredMode = Schema.RequiredMode.REQUIRED)
         String razaoSocial,
         

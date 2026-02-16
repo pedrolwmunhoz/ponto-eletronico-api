@@ -10,14 +10,22 @@ import java.util.UUID;
 /** Doc id 16: Alterar dados de funcionário - Request. */
 @Schema(description = "Requisição de alteração de funcionário. Todos os campos são opcionais; somente os enviados serão atualizados.")
 public record FuncionarioUpdateRequest(
-        @Size(max = 255, message = "username deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único do funcionário", example = "joao.silva")
         String username,
         
-        @Size(max = 255, message = "nomeCompleto deve ter no máximo 255 caracteres")
+        @Size(min = 2, max = 255, message = "nomeCompleto deve ter entre 2 e 255 caracteres")
         @Schema(description = "Nome completo", example = "João da Silva")
         String nomeCompleto,
+
+        @Size(min = 2, max = 100, message = "primeiroNome deve ter entre 2 e 100 caracteres")
+        @Schema(description = "Primeiro nome (editável). Gravado na tabela.")
+        String primeiroNome,
+
+        @Size(min = 2, max = 100, message = "ultimoNome deve ter entre 2 e 100 caracteres")
+        @Schema(description = "Último nome (editável). Gravado na tabela.")
+        String ultimoNome,
         
         @Pattern(regexp = "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$", message = "CPF inválido")
         @Schema(description = "CPF (11 dígitos)", example = "123.456.789-00")

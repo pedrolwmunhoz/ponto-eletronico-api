@@ -70,16 +70,17 @@ public class FuncionarioResetarEmailService {
             auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_RESETAR_EMAIL_FUNCIONARIO, "Reset email funcionário", null, null, false, MensagemErro.TIPO_CREDENCIAL_NAO_ENCONTRADO.getMensagem(), dataRef, httpRequest);
             throw new TipoCredencialNaoEncontradoException();
         }
-        var credencialAntigaId = userCredentialRepository.findCredencialIdByUsuarioTipoCategoria(funcionarioId, tipoEmailId, categoriaPrimarioId);
-        if (credencialAntigaId.isEmpty()) {
+        var credencialId = userCredentialRepository.findCredencialIdByUsuarioTipoCategoria(funcionarioId, tipoEmailId, categoriaPrimarioId);
+        if (credencialId.isEmpty()) {
             auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_RESETAR_EMAIL_FUNCIONARIO, "Reset email funcionário", null, null, false, MensagemErro.CREDENCIAL_NAO_ENCONTRADA.getMensagem(), dataRef, httpRequest);
             throw new CredencialNaoEncontradaException();
         }
 
-        userCredentialRepository.desativar(credencialAntigaId.get(), funcionarioId, dataRef);
-
-        var novaCredencialId = UUID.randomUUID();
-        userCredentialRepository.insert(novaCredencialId, funcionarioId, tipoEmailId, categoriaPrimarioId, emailNormalizado);
+        var rows = userCredentialRepository.updateValor(credencialId.get(), funcionarioId, emailNormalizado);
+        if (rows == 0) {
+            auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_RESETAR_EMAIL_FUNCIONARIO, "Reset email funcionário", null, null, false, MensagemErro.CREDENCIAL_NAO_ENCONTRADA.getMensagem(), dataRef, httpRequest);
+            throw new CredencialNaoEncontradaException();
+        }
 
         auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_RESETAR_EMAIL_FUNCIONARIO, "Reset email funcionário", null, null, true, null, dataRef, httpRequest);
     }

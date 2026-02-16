@@ -1,7 +1,9 @@
 package com.pontoeletronico.api.infrastructure.input.controller;
 
 import com.pontoeletronico.api.domain.services.empresa.EmpresaSolicitacoesPontoService;
+import com.pontoeletronico.api.domain.services.empresa.EspelhoPontoListagemService;
 import com.pontoeletronico.api.infrastructure.input.controller.openapi.EmpresaSolicitacoesPontoSwagger;
+import com.pontoeletronico.api.infrastructure.input.dto.empresa.EspelhoPontoListagemPageResponse;
 import com.pontoeletronico.api.infrastructure.input.dto.registro.*;
 import com.pontoeletronico.api.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,11 +23,30 @@ import java.util.UUID;
 public class EmpresaSolicitacoesPontoController implements EmpresaSolicitacoesPontoSwagger {
 
     private final EmpresaSolicitacoesPontoService empresaSolicitacoesPontoService;
+    private final EspelhoPontoListagemService espelhoPontoListagemService;
     private final JwtUtil jwtUtil;
 
-    public EmpresaSolicitacoesPontoController(EmpresaSolicitacoesPontoService empresaSolicitacoesPontoService, JwtUtil jwtUtil) {
+    public EmpresaSolicitacoesPontoController(EmpresaSolicitacoesPontoService empresaSolicitacoesPontoService,
+                                             EspelhoPontoListagemService espelhoPontoListagemService,
+                                             JwtUtil jwtUtil) {
         this.empresaSolicitacoesPontoService = empresaSolicitacoesPontoService;
+        this.espelhoPontoListagemService = espelhoPontoListagemService;
         this.jwtUtil = jwtUtil;
+    }
+
+    @GetMapping("/espelho-ponto/listagem")
+    @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
+    public ResponseEntity<EspelhoPontoListagemPageResponse> listagemEspelhoPonto(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String nome,
+            @RequestParam(required = false) Integer ano,
+            @RequestParam(required = false) Integer mes,
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
+        var empresaId = jwtUtil.extractUserIdFromToken(authorization);
+        var response = espelhoPontoListagemService.listar(empresaId, page, pageSize, nome, ano, mes, httpRequest);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/funcionario/{funcionarioId}/ponto")
@@ -44,9 +65,10 @@ public class EmpresaSolicitacoesPontoController implements EmpresaSolicitacoesPo
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<Void> deletarRegistro(@PathVariable UUID funcionarioId,
                                                 @PathVariable UUID registroId,
-                                                @RequestHeader("Authorization") String authorization) {
+                                                @RequestHeader("Authorization") String authorization,
+                                                HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        empresaSolicitacoesPontoService.empresaDeletarRegistroManual(empresaId, funcionarioId, registroId);
+        empresaSolicitacoesPontoService.empresaDeletarRegistroManual(empresaId, funcionarioId, registroId, httpRequest);
         return ResponseEntity.noContent().build();
     }
 
@@ -79,9 +101,11 @@ public class EmpresaSolicitacoesPontoController implements EmpresaSolicitacoesPo
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<SolicitacoesPontoListagemResponse> listarSolicitacoes(@RequestParam(defaultValue = "0") int page,
                                                                                 @RequestParam(defaultValue = "20") int size,
-                                                                                @RequestHeader("Authorization") String authorization) {
+                                                                                @RequestParam(required = false) String nome,
+                                                                                @RequestHeader("Authorization") String authorization,
+                                                                                HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = empresaSolicitacoesPontoService.listarSolicitacoes(empresaId, page, size);
+        var response = empresaSolicitacoesPontoService.listarSolicitacoes(empresaId, page, size, nome, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -100,9 +124,10 @@ public class EmpresaSolicitacoesPontoController implements EmpresaSolicitacoesPo
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<Void> reprovarSolicitacao(@PathVariable UUID idRegistroPendente,
                                                    @Valid @RequestBody ReprovarSolicitacaoRequest request,
-                                                   @RequestHeader("Authorization") String authorization) {
+                                                   @RequestHeader("Authorization") String authorization,
+                                                   HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        empresaSolicitacoesPontoService.reprovar(empresaId, idRegistroPendente, request);
+        empresaSolicitacoesPontoService.reprovar(empresaId, idRegistroPendente, request, httpRequest);
         return ResponseEntity.ok().build();
     }
 }

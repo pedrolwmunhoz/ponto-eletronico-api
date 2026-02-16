@@ -38,15 +38,14 @@ public class FuncionarioPerfilService {
 
     private static final String ACAO_BUSCAR_FUNCIONARIO_PERFIL = "BUSCAR_FUNCIONARIO_PERFIL";
 
-    /** Recuperar informações do funcionário. Reutiliza Request DTOs (telefone, contrato, jornada) para o mesmo shape do editar. */
-    public FuncionarioPerfilResponse buscar(UUID funcionarioId, HttpServletRequest httpRequest) {
+    /** Recuperar informações do funcionário. actorId = empresa ao ver perfil de funcionário, ou funcionarioId ao ver próprio perfil. */
+    public FuncionarioPerfilResponse buscar(UUID actorId, UUID funcionarioId, HttpServletRequest httpRequest) {
         var dataRef = LocalDateTime.now();
         identificacaoFuncionarioRepository.findByFuncionarioIdAndAtivoTrue(funcionarioId)
         .orElseThrow(() -> {
-            auditoriaRegistroAsyncService.registrarSemDispositivoID(funcionarioId, ACAO_BUSCAR_FUNCIONARIO_PERFIL, "Buscar funcionário perfil", null, null, false, MensagemErro.FUNCIONARIO_NAO_PERTENCE_EMPRESA.getMensagem(), dataRef, httpRequest);
+            auditoriaRegistroAsyncService.registrarSemDispositivoID(actorId, ACAO_BUSCAR_FUNCIONARIO_PERFIL, "Buscar funcionário perfil", null, null, false, MensagemErro.FUNCIONARIO_NAO_PERTENCE_EMPRESA.getMensagem(), dataRef, httpRequest);
             throw new FuncionarioNaoPertenceEmpresaException();
         });
-        
 
         FuncionarioPerfilProjection p = funcionarioPerfilRepository.findPerfilByFuncionarioId(funcionarioId)
                 .orElseThrow(UsuarioNaoEncontradoException::new);
@@ -98,10 +97,13 @@ public class FuncionarioPerfilService {
             );
         }
 
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(actorId, ACAO_BUSCAR_FUNCIONARIO_PERFIL, "Buscar funcionário perfil", null, null, true, null, LocalDateTime.now(), httpRequest);
         return new FuncionarioPerfilResponse(
                 p.getUsername(),
                 p.getFuncionarioAtivo(),
                 p.getNomeCompleto(),
+                p.getPrimeiroNome(),
+                p.getUltimoNome(),
                 p.getCpf(),
                 p.getDataNascimento(),
                 p.getMatricula(),

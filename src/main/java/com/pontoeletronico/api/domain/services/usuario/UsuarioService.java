@@ -31,6 +31,7 @@ public class UsuarioService {
     private static final String ACAO_ATUALIZAR_PERFIL = "ATUALIZAR_PERFIL";
     private static final String ACAO_ADICIONAR_EMAIL = "ADICIONAR_EMAIL";
     private static final String ACAO_REMOVER_EMAIL = "REMOVER_EMAIL";
+    private static final String ACAO_ATUALIZAR_EMAIL = "ATUALIZAR_EMAIL";
     private static final String ACAO_ADICIONAR_TELEFONE = "ADICIONAR_TELEFONE";
     private static final String ACAO_REMOVER_TELEFONE = "REMOVER_TELEFONE";
     private static final String ACAO_ADICIONAR_CREDENTIAL = "ADICIONAR_CREDENTIAL";
@@ -93,7 +94,34 @@ public class UsuarioService {
         auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_ADICIONAR_EMAIL, "Adicionar email", null, null, true, null, dataReferencia, httpRequest);
     }
 
-    /** Doc id 21: Remover email (soft delete). */
+    /** Atualizar email primário (UPDATE do valor na credencial existente). */
+    @Transactional
+    public void atualizarEmail(UUID usuarioId, UsuarioEmailRequest request, HttpServletRequest httpRequest) {
+        usersRepository.findByIdQuery(usuarioId).orElseThrow(UsuarioNaoEncontradoException::new);
+        var tipoEmailId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_EMAIL);
+        if (tipoEmailId == null) {
+            throw new com.pontoeletronico.api.exception.TipoCredencialNaoEncontradoException();
+        }
+        var emailNormalizado = request.novoEmail().trim().toLowerCase();
+        if (userCredentialRepository.existsByValorAndTipoCredencialId(emailNormalizado, tipoEmailId).isPresent()) {
+            throw new ConflitoException(MensagemErro.EMAIL_JA_CADASTRADO.getMensagem());
+        }
+        var categoriaPrimarioId = tipoCategoriaCredentialRepository.findIdByDescricao(CATEGORIA_CREDENCIAL_PRIMARIO);
+        if (categoriaPrimarioId == null) {
+            throw new com.pontoeletronico.api.exception.TipoCredencialNaoEncontradoException();
+        }
+        var credencialId = userCredentialRepository.findCredencialIdByUsuarioTipoCategoria(usuarioId, tipoEmailId, categoriaPrimarioId);
+        if (credencialId.isEmpty()) {
+            throw new CredencialNaoEncontradaException();
+        }
+        var rows = userCredentialRepository.updateValor(credencialId.get(), usuarioId, emailNormalizado);
+        if (rows == 0) {
+            throw new CredencialNaoEncontradaException();
+        }
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_ATUALIZAR_EMAIL, "Atualizar email", null, null, true, null, LocalDateTime.now(), httpRequest);
+    }
+
+    /** Doc id 21: Remover email (delete físico). */
     @Transactional
     public void removerEmail(UUID usuarioId, UsuarioEmailRequest request, HttpServletRequest httpRequest) {
         var tipoEmailId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_EMAIL);
@@ -103,18 +131,17 @@ public class UsuarioService {
         var credencial = userCredentialRepository.findByUsuarioIdAndValorAndTipoCredencialId(
                 usuarioId, request.novoEmail().trim().toLowerCase(), tipoEmailId)
                 .orElseThrow(CredencialNaoEncontradaException::new);
-        var dataDesativacao = LocalDateTime.now();
-        var rows = userCredentialRepository.desativar(credencial.getId(), usuarioId, dataDesativacao);
+        var rows = userCredentialRepository.deleteByIdAndUsuarioId(credencial.getId(), usuarioId);
         if (rows == 0) {
             throw new CredencialNaoEncontradaException();
         }
-        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_EMAIL, "Remover email", null, null, true, null, dataDesativacao, httpRequest);
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_EMAIL, "Remover email", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
 
     @Transactional
     public void adicionarTelefone(UUID usuarioId, UsuarioTelefoneAdicionarRequest request, HttpServletRequest httpRequest) {
         usersRepository.findByIdQuery(usuarioId).orElseThrow(UsuarioNaoEncontradoException::new);
-        if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumeroAndAtivo(
+        if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumero(
                 request.codigoPais(), request.ddd(), request.numero()).isPresent()) {
             throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
         }
@@ -127,15 +154,14 @@ public class UsuarioService {
     /** Doc id 23: Deletar telefone. */
     @Transactional
     public void removerTelefone(UUID usuarioId, UUID telefoneId, HttpServletRequest httpRequest) {
-        if (usuarioTelefoneRepository.existsByIdAndUsuarioIdAndAtivo(telefoneId, usuarioId).isEmpty()) {
+        if (usuarioTelefoneRepository.existsByIdAndUsuarioId(telefoneId, usuarioId).isEmpty()) {
             throw new TelefoneNaoEncontradoException();
         }
-        var dataDesativacao = LocalDateTime.now();
-        var rows = usuarioTelefoneRepository.desativar(telefoneId, usuarioId, dataDesativacao);
+        var rows = usuarioTelefoneRepository.deleteByIdAndUsuarioId(telefoneId, usuarioId);
         if (rows == 0) {
             throw new TelefoneNaoEncontradoException();
         }
-        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_TELEFONE, "Remover telefone", null, null, true, null, dataDesativacao, httpRequest);
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_TELEFONE, "Remover telefone", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
 
     /** Doc id 24: Adicionar novo tipo de login. */
@@ -162,11 +188,10 @@ public class UsuarioService {
     /** Doc id 25: Deletar tipo de login. */
     @Transactional
     public void removerCredential(UUID usuarioId, UUID credentialId, HttpServletRequest httpRequest) {
-        var dataDesativacao = LocalDateTime.now();
-        var rows = userCredentialRepository.desativar(credentialId, usuarioId, dataDesativacao);
+        var rows = userCredentialRepository.deleteByIdAndUsuarioId(credentialId, usuarioId);
         if (rows == 0) {
             throw new CredencialNaoEncontradaException();
         }
-        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_CREDENTIAL, "Remover credencial", null, null, true, null, dataDesativacao, httpRequest);
+        auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_REMOVER_CREDENTIAL, "Remover credencial", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
 }

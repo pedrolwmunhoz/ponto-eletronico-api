@@ -25,6 +25,12 @@ public class IdentificacaoFuncionario {
     @Column(name = "nome_completo", nullable = false, length = 255)
     private String nomeCompleto;
 
+    @Column(name = "primeiro_nome", nullable = false, length = 100)
+    private String primeiroNome;
+
+    @Column(name = "ultimo_nome", nullable = false, length = 100)
+    private String ultimoNome;
+
     @Column(name = "cpf", nullable = false, unique = true, length = 14)
     private String cpf;
 

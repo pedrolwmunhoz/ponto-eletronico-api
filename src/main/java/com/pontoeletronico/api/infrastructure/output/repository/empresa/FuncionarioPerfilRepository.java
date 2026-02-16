@@ -16,6 +16,8 @@ public interface FuncionarioPerfilRepository extends Repository<Users, UUID> {
                 u.ativo                             AS funcionarioAtivo,
 
                 if_.nome_completo                   AS nomeCompleto,
+                if_.primeiro_nome                   AS "primeiroNome",
+                if_.ultimo_nome                     AS "ultimoNome",
                 if_.cpf                             AS cpf,
                 if_.data_nascimento                 AS dataNascimento,
 
@@ -71,8 +73,6 @@ public interface FuncionarioPerfilRepository extends Repository<Users, UUID> {
                 JOIN tipo_credential tc ON tc.id = uc.tipo_credencial_id AND tc.descricao = 'EMAIL'
                 JOIN tipo_categoria_credential tcc ON tcc.id = uc.categoria_credential_id AND tcc.descricao = 'PRIMARIO'
                 WHERE uc.usuario_id = u.id
-                  AND uc.ativo = true
-                  AND uc.data_desativacao IS NULL
                 ORDER BY uc.id
                 LIMIT 1
             ) email ON true
@@ -81,8 +81,6 @@ public interface FuncionarioPerfilRepository extends Repository<Users, UUID> {
                 SELECT ut.codigo_pais, ut.ddd, ut.numero
                 FROM usuario_telefone ut
                 WHERE ut.usuario_id = u.id
-                  AND ut.ativo = true
-                  AND ut.data_desativacao IS NULL
                 ORDER BY ut.id
                 LIMIT 1
             ) tel ON true

@@ -2,7 +2,6 @@ package com.pontoeletronico.api.domain.entity.auth;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,12 +25,6 @@ public class UserCredential {
 
     @Column(name = "valor", nullable = false, unique = true, length = 255)
     private String valor;
-
-    @Column(name = "ativo", nullable = false)
-    private Boolean ativo = true;
-
-    @Column(name = "data_desativacao")
-    private LocalDateTime dataDesativacao;
 
     @Override
     public boolean equals(Object o) {

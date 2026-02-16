@@ -2,7 +2,6 @@ package com.pontoeletronico.api.domain.entity.usuario;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,12 +25,6 @@ public class UsuarioTelefone {
 
     @Column(name = "numero", nullable = false, length = 20)
     private String numero;
-
-    @Column(name = "ativo", nullable = false)
-    private Boolean ativo = true;
-
-    @Column(name = "data_desativacao")
-    private LocalDateTime dataDesativacao;
 
     @Override
     public boolean equals(Object o) {
