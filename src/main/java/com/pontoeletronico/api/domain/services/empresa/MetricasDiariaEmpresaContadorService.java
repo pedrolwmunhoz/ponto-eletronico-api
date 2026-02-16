@@ -8,13 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
 public class MetricasDiariaEmpresaContadorService {
-
-    private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int LOCK_MAX_RETRIES = 30;
     private static final long LOCK_RETRY_SLEEP_MS = 50;
 
@@ -49,7 +46,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Obtém a métrica do dia de hoje; se não existir, cria copiando o dia anterior (total_ponto_hoje = 0). */
     @Transactional
     public MetricasDiariaEmpresa obterOuCriarMetricaHoje(UUID empresaId) {
-        LocalDate hoje = LocalDate.now(ZONE);
+        LocalDate hoje = LocalDate.now();
         return metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(empresaId, hoje)
                 .orElseGet(() -> criarMetricaParaData(empresaId, hoje));
     }
@@ -57,7 +54,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Incrementa quantidade de funcionários na métrica do dia (ao criar funcionário). */
     @Transactional
     public void incrementarQuantidadeFuncionarios(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now(ZONE);
+        LocalDate dataRef = LocalDate.now();
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);
@@ -71,7 +68,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Decrementa quantidade de funcionários na métrica do dia (ao deletar funcionário). */
     @Transactional
     public void decrementarQuantidadeFuncionarios(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now(ZONE);
+        LocalDate dataRef = LocalDate.now();
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);
@@ -85,7 +82,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Incrementa total_ponto_hoje ao bater ponto pelo app. */
     @Transactional
     public void incrementarRegistrosPonto(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now(ZONE);
+        LocalDate dataRef = LocalDate.now();
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);
@@ -99,7 +96,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Incrementa solicitações pendentes (ao criar solicitação de ponto manual). */
     @Transactional
     public void incrementarSolicitacoesPendentes(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now(ZONE);
+        LocalDate dataRef = LocalDate.now();
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);
@@ -113,7 +110,7 @@ public class MetricasDiariaEmpresaContadorService {
     /** Decrementa solicitações pendentes (ao aprovar ou reprovar solicitação). */
     @Transactional
     public void decrementarSolicitacoesPendentes(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now(ZONE);
+            LocalDate dataRef = LocalDate.now();
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);

@@ -11,7 +11,7 @@ spring:
 
   datasource:
     # Se as env vars não estiverem definidas (ex.: local), usa os valores abaixo. No Render, defina no Dashboard.
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0&sslmode=require}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0&sslmode=require&options=-c%20lock_timeout%3D20000%20-c%20idle_in_transaction_session_timeout%3D30000}
     username: ${SPRING_DATASOURCE_USERNAME:postgres.tnlgxtcyfurrutpimbbs}
     password: ${SPRING_DATASOURCE_PASSWORD:atheCobol4ever.@1}
     driver-class-name: org.postgresql.Driver
@@ -21,11 +21,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema-feriado.sql
 
 jwt:
   public.key: classpath:keys/app.pub

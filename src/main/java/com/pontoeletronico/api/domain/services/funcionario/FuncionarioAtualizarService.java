@@ -146,6 +146,9 @@ public class FuncionarioAtualizarService {
         if (request.usuarioTelefone() != null) {
             usuarioTelefoneRepository.deleteAllByUsuarioId(funcionarioId);
             var usuarioTelefone = request.usuarioTelefone();
+            if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumero(usuarioTelefone.codigoPais(), usuarioTelefone.ddd(), usuarioTelefone.numero()).isPresent()) {
+                throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+            }
             usuarioTelefoneRepository.insert(UUID.randomUUID(), funcionarioId, usuarioTelefone.codigoPais(), usuarioTelefone.ddd(), usuarioTelefone.numero());
         }
 

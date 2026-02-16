@@ -1,10 +1,13 @@
 package com.pontoeletronico.api.domain.services.bancohoras;
 
+import com.pontoeletronico.api.domain.entity.empresa.BancoHorasMensal;
 import com.pontoeletronico.api.domain.entity.registro.RegistroPonto;
 import com.pontoeletronico.api.domain.entity.registro.ResumoPontoDia;
 import com.pontoeletronico.api.domain.entity.registro.XrefPontoResumo;
 import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
+import com.pontoeletronico.api.domain.services.empresa.MetricasDiariaEmpresaContadorService;
+import com.pontoeletronico.api.infrastructure.output.repository.bancohoras.BancoHorasMensalRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.RegistroPontoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoPontoDiaRepository;
 import com.pontoeletronico.api.exception.RegistroNaoEncontradoException;
@@ -35,6 +38,8 @@ public class CalcularBancoHorasSoftDeleteService {
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
     private final BancoHorasMensalService calcularBancoHorasMensal;
     private final CalcularResumoDiaUtils calcularResumoDiaUtils;
+    private final BancoHorasMensalRepository bancoHorasMensalRepository;
+    private final MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService;
 
 
     /**
@@ -48,6 +53,18 @@ public class CalcularBancoHorasSoftDeleteService {
         ResumoPontoDia jornadaAfetada = xrefPontoResumoRepository.findResumoPontoDiaByRegistroPontoId(idRegistroDeletado)
         .orElseThrow(() -> new RegistroNaoEncontradoException("Jornada não encontrada para o registro deletado"));
         
+        Optional<BancoHorasMensal> bancoHorasMensal = bancoHorasMensalRepository
+        .findByFuncionarioIdAndAnoRefAndMesRef(
+            funcionarioId, 
+            dataRegistroDeletado.getYear(), 
+            dataRegistroDeletado.getMonthValue()
+        );
+
+        Duration totalTrabalhadoAntes = Duration.ZERO;
+        if(bancoHorasMensal.isPresent()) {
+            totalTrabalhadoAntes = bancoHorasMensal.get().getTotalHorasTrabalhadas();
+        }
+
         var listaRegistrosJornadaAfetada = xrefPontoResumoRepository
         .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId());
         
@@ -156,6 +173,13 @@ public class CalcularBancoHorasSoftDeleteService {
         }
 
         calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+
+        var bancoHorasMensalDepois = bancoHorasMensalRepository
+                .findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+        Duration totalTrabalhadoDepois = bancoHorasMensalDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+        Duration deltaTotalTrabalhadoJornadaAfetada = totalTrabalhadoDepois.minus(totalTrabalhadoAntes);
+
+        metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculo(empresaId, dataRegistroDeletado.toLocalDate(), -1, deltaTotalTrabalhadoJornadaAfetada);
     }
 
     private void inserirXrefPontoResumo( UUID funcionarioId, UUID idJornadaNova, UUID idRegistroPonto, LocalDateTime dataRegistro) {

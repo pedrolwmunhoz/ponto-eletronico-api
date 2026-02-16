@@ -92,8 +92,9 @@ public class CalcularBancoHorasAplicativoService {
         if (!tipoEntradaNovo) {
             bancoHorasMensalService.acumularNoMensal(funcionarioId, empresaId, dataRegistro.getYear(), dataRegistro.getMonthValue(), null, diff);
             metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculo(empresaId, dataRegistro.toLocalDate(), 0, diff);
+        }else{
+            metricasDiariaEmpresaContadorService.incrementarRegistrosPonto(empresaId);
         }
-
         estado.setUltimaBatida(dataRegistro);
         estado.setUltimaJornadaId(resumo.getId());
         estado.setTipoUltimaBatida(tipoEntradaNovo ? EstadoJornadaFuncionario.TIPO_ENTRADA : EstadoJornadaFuncionario.TIPO_SAIDA);

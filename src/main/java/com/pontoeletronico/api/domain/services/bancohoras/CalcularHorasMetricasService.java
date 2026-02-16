@@ -2,6 +2,7 @@ package com.pontoeletronico.api.domain.services.bancohoras;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -12,12 +13,16 @@ import org.springframework.stereotype.Service;
 import lombok.AllArgsConstructor;
 
 import com.pontoeletronico.api.domain.entity.registro.ResumoPontoDia;
+import com.pontoeletronico.api.domain.entity.registro.XrefPontoResumo;
+import com.pontoeletronico.api.domain.entity.empresa.BancoHorasMensal;
 import com.pontoeletronico.api.domain.entity.registro.RegistroPonto;
 import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
-import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
+    import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
+    import com.pontoeletronico.api.infrastructure.output.repository.bancohoras.BancoHorasMensalRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoPontoDiaRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.RegistroPontoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.XrefPontoResumoRepository;
+import com.pontoeletronico.api.domain.services.empresa.MetricasDiariaEmpresaContadorService;
 
 @Service
 @AllArgsConstructor
@@ -28,7 +33,8 @@ public class CalcularHorasMetricasService {
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
     private final BancoHorasMensalService calcularBancoHorasMensal;
     private final CalcularResumoDiaUtils calcularResumoDiaUtils;
-    
+    private final MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService;
+    private final BancoHorasMensalRepository bancoHorasMensalRepository;
     public void calcularHorasAposEntradaManual(UUID empresaId, RegistroPonto registroPonto, JornadaConfig jornadaConfig) {
          
         var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
@@ -41,27 +47,47 @@ public class CalcularHorasMetricasService {
         Optional<ResumoPontoDia> jornadaAfetadaDataAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(registroPonto.getUsuarioId(), inicioRangeJornada, dataAtualInicio);
         Optional<ResumoPontoDia> jornadaAfetadaDataPosterior = null;
 
+        Optional<BancoHorasMensal> bancoHorasMensal = bancoHorasMensalRepository
+        .findByFuncionarioIdAndAnoRefAndMesRef(
+            registroPonto.getUsuarioId(), 
+            registroPonto.getCreatedAt().getYear(), 
+            registroPonto.getCreatedAt().getMonthValue()
+        );
+
+        Duration totalTrabalhadoAntes = Duration.ZERO;
+        if(bancoHorasMensal.isPresent()) {
+            totalTrabalhadoAntes = bancoHorasMensal.get().getTotalHorasTrabalhadas();
+        }
+
+
         UUID jornadaAfetadaId = null;
         if(jornadaAfetadaDataAnterior.isPresent()) {
             //existe jornada afetada - tratar
-            handleJornadaAfetada(jornadaAfetadaDataAnterior.get(), registroPonto, jornadaConfig);
             jornadaAfetadaId = jornadaAfetadaDataAnterior.get().getId();
+            handleJornadaAfetada(jornadaAfetadaDataAnterior.get(), registroPonto, jornadaConfig);
+
         }else{
 
             jornadaAfetadaDataPosterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(registroPonto.getUsuarioId(), dataAtualFim, fimRangeJornada);
             if(jornadaAfetadaDataPosterior.isPresent()) {
                 //existe jornada afetada - tratar
-                handleJornadaAfetada(jornadaAfetadaDataPosterior.get(), registroPonto, jornadaConfig);
                 jornadaAfetadaId = jornadaAfetadaDataPosterior.get().getId();
+                handleJornadaAfetada(jornadaAfetadaDataPosterior.get(), registroPonto, jornadaConfig);
+
             }else{
                 //nao existe jornada afetada - criar nova jornada
                 var idNovoResumo = UUID.randomUUID();
-                resumoPontoDiaRepository.insert(idNovoResumo, registroPonto.getUsuarioId(), empresaId, registroPonto.getCreatedAt(), registroPonto.getCreatedAt(), Duration.ZERO, Duration.ZERO, false, null, registroPonto.getCreatedAt());
                 jornadaAfetadaId = idNovoResumo;
+                resumoPontoDiaRepository.insert(idNovoResumo, registroPonto.getUsuarioId(), empresaId, registroPonto.getCreatedAt(), registroPonto.getCreatedAt(), Duration.ZERO, Duration.ZERO, false, null, registroPonto.getCreatedAt());
             }
         }
         salvarXrefPontoResumo(registroPonto.getUsuarioId(), jornadaAfetadaId, registroPonto.getId(), registroPonto.getCreatedAt());
         calcularBancoHorasMensal.recalcularMensal(registroPonto.getUsuarioId(), empresaId, registroPonto.getCreatedAt().getYear(), registroPonto.getCreatedAt().getMonthValue());
+        
+        // Corrige cálculo do delta, deve ser "depois - antes" e evitar valores negativos inesperados em casos de null
+        Duration totalTrabalhadoDepois = bancoHorasMensal.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+        Duration deltaTotalTrabalhadoJornadaAfetada = totalTrabalhadoDepois.minus(totalTrabalhadoAntes);
+        metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculo(empresaId, registroPonto.getCreatedAt().toLocalDate(), 1, deltaTotalTrabalhadoJornadaAfetada);
     }
 
     private void handleJornadaAfetada(ResumoPontoDia jornadaAfetada, RegistroPonto novoRegistro, JornadaConfig jornadaConfig) {
@@ -167,4 +193,5 @@ public class CalcularHorasMetricasService {
             salvarXrefPontoResumo(jornadaAfetada.getFuncionarioId(), jornadaAfetada.getId(), registro.getId(), registro.getCreatedAt());
         }
     }
+
 }

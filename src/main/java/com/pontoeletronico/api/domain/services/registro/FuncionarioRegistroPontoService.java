@@ -132,7 +132,7 @@ public class FuncionarioRegistroPontoService {
 
     private record MarcacaoJsonItem(UUID registroId, LocalDateTime horario, String tipo) { }
 
-    @Transactional
+    @Transactional(timeout = 60)
     public void registrarPontoManualFuncionario(UUID funcionarioId, UUID idempotencyKey, RegistroPontoManualRequest request, HttpServletRequest httpRequest) {
         if (idempotencyKey == null) {
             throw new BadRequestException("Idempotency-Key obrigatório");
@@ -187,7 +187,7 @@ public class FuncionarioRegistroPontoService {
         }
     }
     /** Doc id 30: Registro de ponto público (tablet da empresa). */
-    @Transactional
+    @Transactional(timeout = 60)
     public void registrarPontoAppPublicoFuncionario(UUID empresaId, RegistroPontoPublicoRequest request, UUID idempotencyKey, HttpServletRequest httpRequest) {
         var dataNovoRegistro = LocalDateTime.now();
         if (request == null || request.codigoPonto() == null ) {
@@ -252,7 +252,7 @@ public class FuncionarioRegistroPontoService {
     }
 
     /** Doc id 32: Deletar registro de ponto (funcionário). */
-    @Transactional
+    @Transactional(timeout = 60)
     public void deletarRegistroFuncionario(UUID funcionarioId, UUID idRegistro, RegistroMetadadosRequest request) {
         if (idRegistro == null) {
             throw new BadRequestException("Id do registro de ponto é obrigatório");

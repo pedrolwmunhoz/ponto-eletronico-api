@@ -108,6 +108,10 @@ public class EmpresaCadastroService {
                 request.empresaEndereco().complemento(), request.empresaEndereco().bairro(),
                 request.empresaEndereco().cidade(), request.empresaEndereco().uf().toUpperCase(), cepNormalizado,
                 dataCriacao);
+        if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumero(
+                request.usuarioTelefone().codigoPais(), request.usuarioTelefone().ddd(), request.usuarioTelefone().numero()).isPresent()) {
+            throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+        }
         usuarioTelefoneRepository.insert(
                 UUID.randomUUID(), empresaId,
                 request.usuarioTelefone().codigoPais(), request.usuarioTelefone().ddd(), request.usuarioTelefone().numero());
