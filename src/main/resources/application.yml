@@ -10,9 +10,10 @@ spring:
     name: ponto-eletronico-api
 
   datasource:
-    url: jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0&sslmode=require
-    username: postgres.tnlgxtcyfurrutpimbbs
-    password: atheCobol4ever.@1
+    # Se as env vars não estiverem definidas (ex.: local), usa os valores abaixo. No Render, defina no Dashboard.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0&sslmode=require}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres.tnlgxtcyfurrutpimbbs}
+    password: ${SPRING_DATASOURCE_PASSWORD:atheCobol4ever.@1}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
