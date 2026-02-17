@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * user_credential: sem ativo/data_desativacao; apenas delete físico.
+ * Onde deletar email/telefone/documento do usuário → deletar também a linha correspondente aqui.
+ */
 public interface UserCredentialRepository extends JpaRepository<UserCredential, UUID> {
 
     @Query(value = "SELECT 1 FROM user_credential WHERE valor = :valor AND tipo_credencial_id = :tipoCredencialId LIMIT 1", nativeQuery = true)
@@ -29,7 +33,7 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
               AND tipo_credencial_id = :tipoCredencialId
             LIMIT 1
             """, nativeQuery = true)
-    Optional<UserCredential> findByValorAndTipoCredencialIdAndAtivo(@Param("valor") String valor, @Param("tipoCredencialId") Integer tipoCredencialId);
+    Optional<UserCredential> findByValorAndTipoCredencialId(@Param("valor") String valor, @Param("tipoCredencialId") Integer tipoCredencialId);
 
     @Query(value = """
             SELECT id
@@ -67,4 +71,8 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
     @Modifying
     @Query(value = "DELETE FROM user_credential WHERE id = :id AND usuario_id = :usuarioId", nativeQuery = true)
     int deleteByIdAndUsuarioId(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
+
+    @Modifying
+    @Query(value = "DELETE FROM user_credential WHERE usuario_id = :usuarioId AND tipo_credencial_id = :tipoCredencialId", nativeQuery = true)
+    int deleteByUsuarioIdAndTipoCredencialId(@Param("usuarioId") UUID usuarioId, @Param("tipoCredencialId") Integer tipoCredencialId);
 }

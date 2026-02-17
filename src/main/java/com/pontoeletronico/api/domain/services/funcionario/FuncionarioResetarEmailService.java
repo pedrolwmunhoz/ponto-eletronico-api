@@ -60,7 +60,8 @@ public class FuncionarioResetarEmailService {
         }
 
         var emailNormalizado = request.emailNovo().trim().toLowerCase();
-        if (userCredentialRepository.existsByValorAndTipoCredencialId(emailNormalizado, tipoEmailId).isPresent()) {
+        var credencialComValor = userCredentialRepository.findByValorAndTipoCredencialId(emailNormalizado, tipoEmailId);
+        if (credencialComValor.isPresent() && !credencialComValor.get().getUsuarioId().equals(funcionarioId)) {
             auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_RESETAR_EMAIL_FUNCIONARIO, "Reset email funcionário", null, null, false, MensagemErro.EMAIL_JA_CADASTRADO.getMensagem(), dataRef, httpRequest);
             throw new ConflitoException(MensagemErro.EMAIL_JA_CADASTRADO.getMensagem());
         }

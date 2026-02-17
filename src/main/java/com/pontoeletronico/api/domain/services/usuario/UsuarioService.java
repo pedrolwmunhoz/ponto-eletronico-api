@@ -22,10 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Operações de perfil do usuário (empresa ou funcionário).
+ * Regra de credenciais e telefone: não há desativação (ativo/data_desativacao); apenas delete físico.
+ * Onde DELETAR email/telefone/documento → deletar também a credencial correspondente.
+ * Onde EDITAR → atualizar a credencial (updateValor ou delete + insert).
+ * Onde ADICIONAR → inserir na user_credential (e em usuario_telefone quando for telefone).
+ */
 @Service
 public class UsuarioService {
 
     private static final String TIPO_CREDENCIAL_EMAIL = "EMAIL";
+    private static final String TIPO_CREDENCIAL_TELEFONE = "TELEFONE";
     private static final String CATEGORIA_CREDENCIAL_PRIMARIO = "PRIMARIO";
     private static final String CATEGORIA_CREDENCIAL_SECUNDARIO = "SECUNDARIO";
     private static final String ACAO_ATUALIZAR_PERFIL = "ATUALIZAR_PERFIL";
@@ -94,7 +102,7 @@ public class UsuarioService {
         auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_ADICIONAR_EMAIL, "Adicionar email", null, null, true, null, dataReferencia, httpRequest);
     }
 
-    /** Atualizar email primário (UPDATE do valor na credencial existente). */
+    /** Atualizar email primário (UPDATE do valor na credencial existente). Também atualiza a credencial. */
     @Transactional
     public void atualizarEmail(UUID usuarioId, UsuarioEmailRequest request, HttpServletRequest httpRequest) {
         usersRepository.findByIdQuery(usuarioId).orElseThrow(UsuarioNaoEncontradoException::new);
@@ -103,7 +111,8 @@ public class UsuarioService {
             throw new com.pontoeletronico.api.exception.TipoCredencialNaoEncontradoException();
         }
         var emailNormalizado = request.novoEmail().trim().toLowerCase();
-        if (userCredentialRepository.existsByValorAndTipoCredencialId(emailNormalizado, tipoEmailId).isPresent()) {
+        var credencialComValor = userCredentialRepository.findByValorAndTipoCredencialId(emailNormalizado, tipoEmailId);
+        if (credencialComValor.isPresent() && !credencialComValor.get().getUsuarioId().equals(usuarioId)) {
             throw new ConflitoException(MensagemErro.EMAIL_JA_CADASTRADO.getMensagem());
         }
         var categoriaPrimarioId = tipoCategoriaCredentialRepository.findIdByDescricao(CATEGORIA_CREDENCIAL_PRIMARIO);
@@ -112,11 +121,12 @@ public class UsuarioService {
         }
         var credencialId = userCredentialRepository.findCredencialIdByUsuarioTipoCategoria(usuarioId, tipoEmailId, categoriaPrimarioId);
         if (credencialId.isEmpty()) {
-            throw new CredencialNaoEncontradaException();
-        }
-        var rows = userCredentialRepository.updateValor(credencialId.get(), usuarioId, emailNormalizado);
-        if (rows == 0) {
-            throw new CredencialNaoEncontradaException();
+            userCredentialRepository.insert(UUID.randomUUID(), usuarioId, tipoEmailId, categoriaPrimarioId, emailNormalizado);
+        } else {
+            var rows = userCredentialRepository.updateValor(credencialId.get(), usuarioId, emailNormalizado);
+            if (rows == 0) {
+                throw new CredencialNaoEncontradaException();
+            }
         }
         auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_ATUALIZAR_EMAIL, "Atualizar email", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
@@ -147,15 +157,32 @@ public class UsuarioService {
         }
         usuarioTelefoneRepository.insert(
                 UUID.randomUUID(), usuarioId, request.codigoPais(), request.ddd(), request.numero());
+        var tipoTelefoneId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_TELEFONE);
+        var categoriaPrimarioId = tipoCategoriaCredentialRepository.findIdByDescricao(CATEGORIA_CREDENCIAL_PRIMARIO);
+        if (tipoTelefoneId != null && categoriaPrimarioId != null) {
+            String valorTelefone = request.codigoPais().replaceAll("\\D", "") + request.ddd().replaceAll("\\D", "") + request.numero().replaceAll("\\D", "");
+            if (userCredentialRepository.existsByValorAndTipoCredencialId(valorTelefone, tipoTelefoneId).isPresent()) {
+                throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+            }
+            userCredentialRepository.insert(UUID.randomUUID(), usuarioId, tipoTelefoneId, categoriaPrimarioId, valorTelefone);
+        }
         var dataReferencia = LocalDateTime.now();
         auditoriaRegistroAsyncService.registrarSemDispositivoID(usuarioId, ACAO_ADICIONAR_TELEFONE, "Adicionar telefone", null, null, true, null, dataReferencia, httpRequest);
     }
 
-    /** Doc id 23: Deletar telefone. */
+    /** Doc id 23: Deletar telefone. Remove também a credencial TELEFONE com o mesmo valor (delete físico). */
     @Transactional
     public void removerTelefone(UUID usuarioId, UUID telefoneId, HttpServletRequest httpRequest) {
-        if (usuarioTelefoneRepository.existsByIdAndUsuarioId(telefoneId, usuarioId).isEmpty()) {
+        var telefoneOpt = usuarioTelefoneRepository.findById(telefoneId);
+        if (telefoneOpt.isEmpty() || !telefoneOpt.get().getUsuarioId().equals(usuarioId)) {
             throw new TelefoneNaoEncontradoException();
+        }
+        var telefone = telefoneOpt.get();
+        String valorTelefone = telefone.getCodigoPais().replaceAll("\\D", "") + telefone.getDdd().replaceAll("\\D", "") + telefone.getNumero().replaceAll("\\D", "");
+        var tipoTelefoneId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_TELEFONE);
+        if (tipoTelefoneId != null) {
+            userCredentialRepository.findByUsuarioIdAndValorAndTipoCredencialId(usuarioId, valorTelefone, tipoTelefoneId)
+                    .ifPresent(c -> userCredentialRepository.deleteByIdAndUsuarioId(c.getId(), usuarioId));
         }
         var rows = usuarioTelefoneRepository.deleteByIdAndUsuarioId(telefoneId, usuarioId);
         if (rows == 0) {

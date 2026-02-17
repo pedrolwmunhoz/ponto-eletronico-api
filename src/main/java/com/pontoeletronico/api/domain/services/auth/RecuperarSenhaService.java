@@ -49,7 +49,7 @@ public class RecuperarSenhaService {
             throw new TipoCredencialNaoEncontradoException();
         }
         var email = request.email().trim().toLowerCase();
-        var credencial = userCredentialRepository.findByValorAndTipoCredencialIdAndAtivo(email, tipoId).orElse(null);
+        var credencial = userCredentialRepository.findByValorAndTipoCredencialId(email, tipoId).orElse(null);
         if (credencial == null) {
             return;
         }

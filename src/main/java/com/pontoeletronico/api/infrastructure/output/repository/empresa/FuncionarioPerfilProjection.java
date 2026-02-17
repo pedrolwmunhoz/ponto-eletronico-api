@@ -18,10 +18,10 @@ public interface FuncionarioPerfilProjection {
     String getCodigoPais();
     String getDdd();
     String getNumero();
-    Boolean getContratoAtivo();
     String getCargo();
     String getDepartamento();
     String getTipoContrato();
+    Boolean getContratoAtivo();
     LocalDate getDataAdmissao();
     LocalDate getDataDemissao();
     BigDecimal getSalarioMensal();

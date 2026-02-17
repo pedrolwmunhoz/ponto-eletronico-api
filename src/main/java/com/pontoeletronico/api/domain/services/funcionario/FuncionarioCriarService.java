@@ -30,6 +30,8 @@ public class FuncionarioCriarService {
 
     private static final String TIPO_FUNCIONARIO = "FUNCIONARIO";
     private static final String TIPO_CREDENCIAL_EMAIL = "EMAIL";
+    private static final String TIPO_CREDENCIAL_TELEFONE = "TELEFONE";
+    private static final String TIPO_CREDENCIAL_CPF = "CPF";
     private static final String CATEGORIA_CREDENCIAL_PRIMARIO = "PRIMARIO";
     private static final String ACAO_CADASTRO_FUNCIONARIO = "CADASTRO_FUNCIONARIO";
 
@@ -160,6 +162,16 @@ public class FuncionarioCriarService {
         userCredentialRepository.insert(credencialId, funcionarioId, tipoEmailId, categoriaPrimarioId, emailNormalizado);
         userPasswordRepository.insert(UUID.randomUUID(), funcionarioId, passwordEncoder.encode(request.senha()), dataCriacao);
 
+        var tipoTelefoneId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_TELEFONE);
+        var tipoCpfId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_CPF);
+        if (tipoCpfId != null) {
+            if (userCredentialRepository.existsByValorAndTipoCredencialId(cpfNormalizado, tipoCpfId).isPresent()) {
+                registrarAuditoria(empresaId, null, false, MensagemErro.CPF_JA_CADASTRADO.getMensagem(), dataCriacao, httpRequest);
+                throw new ConflitoException(MensagemErro.CPF_JA_CADASTRADO.getMensagem());
+            }
+            userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoCpfId, categoriaPrimarioId, cpfNormalizado);
+        }
+
         var codigoPonto = identificacaoFuncionarioRepository.nextCodigoPonto(empresaId);
         if (codigoPonto == null || codigoPonto > 999999) {
             registrarAuditoria(empresaId, null, false, "Limite de funcionários por empresa atingido.", dataCriacao, httpRequest);
@@ -178,6 +190,14 @@ public class FuncionarioCriarService {
                 throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
             }
             usuarioTelefoneRepository.insert(UUID.randomUUID(), funcionarioId, telefone.codigoPais(), telefone.ddd(), telefone.numero());
+            String valorTelefone = telefone.codigoPais().replaceAll("\\D", "") + telefone.ddd().replaceAll("\\D", "") + telefone.numero().replaceAll("\\D", "");
+            if (tipoTelefoneId != null) {
+                if (userCredentialRepository.existsByValorAndTipoCredencialId(valorTelefone, tipoTelefoneId).isPresent()) {
+                    registrarAuditoria(empresaId, funcionarioId, false, MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem(), dataCriacao, httpRequest);
+                    throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+                }
+                userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoTelefoneId, categoriaPrimarioId, valorTelefone);
+            }
         }
 
         if (contrato != null) {

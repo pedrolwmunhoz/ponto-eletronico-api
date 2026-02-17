@@ -25,6 +25,8 @@ import java.util.UUID;
 public class FuncionarioAtualizarService {
 
     private static final String TIPO_CREDENCIAL_CPF = "CPF";
+    private static final String TIPO_CREDENCIAL_EMAIL = "EMAIL";
+    private static final String TIPO_CREDENCIAL_TELEFONE = "TELEFONE";
     private static final String CATEGORIA_CREDENCIAL_PRIMARIO = "PRIMARIO";
     private static final String ACAO_ATUALIZAR_FUNCIONARIO = "ATUALIZAR_FUNCIONARIO";
 
@@ -74,7 +76,8 @@ public class FuncionarioAtualizarService {
     }
 
     @Transactional
-    /** Doc id 16: Alterar dados de funcionário (mesmo corpo do cadastro). */
+    /** Doc id 16: Alterar dados de funcionário (mesmo corpo do cadastro).
+     * Email/telefone/CPF: editar aqui implica editar user_credential (updateValor ou delete+insert); telefone: delete físico em credential + usuario_telefone, depois insert. */
     public void atualizar(UUID empresaId, UUID funcionarioId, FuncionarioUpdateRequest request, HttpServletRequest httpRequest) {
         if (identificacaoFuncionarioRepository.findByEmpresaIdAndFuncionarioIdAndAtivoTrue(empresaId, funcionarioId).isEmpty()) {
             var dataRef = LocalDateTime.now();
@@ -104,6 +107,8 @@ public class FuncionarioAtualizarService {
             usersRepository.updateUsername(funcionarioId, request.username());
         }
         var tipoCpfId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_CPF);
+        var tipoEmailId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_EMAIL);
+        var tipoTelefoneId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_TELEFONE);
         var categoriaPrimarioId = tipoCategoriaCredentialRepository.findIdByDescricao(CATEGORIA_CREDENCIAL_PRIMARIO);
         if (tipoCpfId == null || categoriaPrimarioId == null) {
             auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_ATUALIZAR_FUNCIONARIO, "Atualizar funcionário", null, null, false, MensagemErro.TIPO_CREDENCIAL_NAO_ENCONTRADO.getMensagem(), dataAtual, httpRequest);
@@ -142,17 +147,42 @@ public class FuncionarioAtualizarService {
             }
         }
 
-        // TELEFONE: só se enviado – deletar antigos e adicionar novo (conjunto validado inteiro via @Valid)
+        // EMAIL (credencial): atualizar ou adicionar se enviado
+        if (request.email() != null && !request.email().isBlank() && tipoEmailId != null) {
+            var emailNormalizado = request.email().trim().toLowerCase();
+            var credencialComValor = userCredentialRepository.findByValorAndTipoCredencialId(emailNormalizado, tipoEmailId);
+            if (credencialComValor.isPresent() && !credencialComValor.get().getUsuarioId().equals(funcionarioId)) {
+                auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_ATUALIZAR_FUNCIONARIO, "Atualizar funcionário", null, null, false, MensagemErro.EMAIL_JA_CADASTRADO.getMensagem(), dataAtual, httpRequest);
+                throw new ConflitoException(MensagemErro.EMAIL_JA_CADASTRADO.getMensagem());
+            }
+            var credencialEmailId = userCredentialRepository.findCredencialIdByUsuarioTipoCategoria(funcionarioId, tipoEmailId, categoriaPrimarioId);
+            if (credencialEmailId.isPresent()) {
+                userCredentialRepository.updateValor(credencialEmailId.get(), funcionarioId, emailNormalizado);
+            } else {
+                userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoEmailId, categoriaPrimarioId, emailNormalizado);
+            }
+        }
+
+        // TELEFONE: só se enviado – deletar antigos e adicionar novo; credencial TELEFONE em sync (delete físico)
         if (request.usuarioTelefone() != null) {
+            if (tipoTelefoneId != null) {
+                userCredentialRepository.deleteByUsuarioIdAndTipoCredencialId(funcionarioId, tipoTelefoneId);
+            }
             usuarioTelefoneRepository.deleteAllByUsuarioId(funcionarioId);
             var usuarioTelefone = request.usuarioTelefone();
             if (usuarioTelefoneRepository.existsByCodigoPaisAndDddAndNumero(usuarioTelefone.codigoPais(), usuarioTelefone.ddd(), usuarioTelefone.numero()).isPresent()) {
                 throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
             }
             usuarioTelefoneRepository.insert(UUID.randomUUID(), funcionarioId, usuarioTelefone.codigoPais(), usuarioTelefone.ddd(), usuarioTelefone.numero());
+            String valorTelefone = usuarioTelefone.codigoPais().replaceAll("\\D", "") + usuarioTelefone.ddd().replaceAll("\\D", "") + usuarioTelefone.numero().replaceAll("\\D", "");
+            if (tipoTelefoneId != null) {
+                if (userCredentialRepository.existsByValorAndTipoCredencialId(valorTelefone, tipoTelefoneId).isPresent()) {
+                    auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_ATUALIZAR_FUNCIONARIO, "Atualizar funcionário", null, null, false, MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem(), dataAtual, httpRequest);
+                    throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+                }
+                userCredentialRepository.insert(UUID.randomUUID(), funcionarioId, tipoTelefoneId, categoriaPrimarioId, valorTelefone);
+            }
         }
-
-
 
         var contrato = request.contratoFuncionario();
         if (contrato != null) {

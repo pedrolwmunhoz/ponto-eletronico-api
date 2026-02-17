@@ -26,6 +26,8 @@ public class EmpresaCadastroService {
 
     private static final String TIPO_EMPRESA = "EMPRESA";
     private static final String TIPO_CREDENCIAL_EMAIL = "EMAIL";
+    private static final String TIPO_CREDENCIAL_TELEFONE = "TELEFONE";
+    private static final String TIPO_CREDENCIAL_CNPJ = "CNPJ";
     private static final String CATEGORIA_CREDENCIAL_PRIMARIO = "PRIMARIO";
     private static final String ACAO_CADASTRO_EMPRESA = "CADASTRO_EMPRESA";
 
@@ -101,6 +103,15 @@ public class EmpresaCadastroService {
         userCredentialRepository.insert(credencialId, empresaId, tipoEmailId, categoriaPrimarioId, emailNormalizado);
         userPasswordRepository.insert(UUID.randomUUID(), empresaId, passwordEncoder.encode(request.senha()), dataCriacao);
 
+        var tipoTelefoneId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_TELEFONE);
+        var tipoCnpjId = tipoCredentialRepository.findIdByDescricao(TIPO_CREDENCIAL_CNPJ);
+        if (tipoCnpjId != null) {
+            if (userCredentialRepository.existsByValorAndTipoCredencialId(cnpjNormalizado, tipoCnpjId).isPresent()) {
+                throw new ConflitoException(MensagemErro.CNPJ_JA_CADASTRADO.getMensagem());
+            }
+            userCredentialRepository.insert(UUID.randomUUID(), empresaId, tipoCnpjId, categoriaPrimarioId, cnpjNormalizado);
+        }
+
         empresaDadosFiscalRepository.insert(UUID.randomUUID(), empresaId, request.razaoSocial(), cnpjNormalizado, dataCriacao);
         empresaEnderecoRepository.insert(
                 UUID.randomUUID(), empresaId,
@@ -115,6 +126,13 @@ public class EmpresaCadastroService {
         usuarioTelefoneRepository.insert(
                 UUID.randomUUID(), empresaId,
                 request.usuarioTelefone().codigoPais(), request.usuarioTelefone().ddd(), request.usuarioTelefone().numero());
+        String valorTelefone = request.usuarioTelefone().codigoPais().replaceAll("\\D", "") + request.usuarioTelefone().ddd().replaceAll("\\D", "") + request.usuarioTelefone().numero().replaceAll("\\D", "");
+        if (tipoTelefoneId != null) {
+            if (userCredentialRepository.existsByValorAndTipoCredencialId(valorTelefone, tipoTelefoneId).isPresent()) {
+                throw new ConflitoException(MensagemErro.TELEFONE_JA_CADASTRADO.getMensagem());
+            }
+            userCredentialRepository.insert(UUID.randomUUID(), empresaId, tipoTelefoneId, categoriaPrimarioId, valorTelefone);
+        }
 
         registrarAuditoriaEmpresa(empresaId, true, null, dataCriacao, httpRequest);
         return empresaId;

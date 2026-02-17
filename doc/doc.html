@@ -968,8 +968,8 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "empresaId": "UUID (NOT NULL, FK → users.id, ON DELETE CASCADE)"
 }
 
-// ─── TABELA: usuario_telefone ───
-// Nota: Esta tabela é compartilhada entre funcionários e empresas. Delete físico (sem ativo/data_desativacao).
+// ─── TABELA: usuario_telefone ─── (Delete físico)
+// Nota: Compartilhada entre funcionários e empresas.
 {
   "id": "UUID (PK)",
   "usuarioId": "UUID (FK → users.id, NOT NULL)",
@@ -1322,7 +1322,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             credencial: {
                 title: "4. User Credential (Login)",
                 desc: "Armazena credenciais de autenticação para funcionários e empresas. Senha sempre em hash. categoriaCredentialId indica se é PRIMARIO (principal) ou SECUNDARIO (adicional).",
-                json: `// ─── TABELA: user_credential ─── (Delete físico; sem ativo/data_desativacao)
+                json: `// ─── TABELA: user_credential ─── (Delete físico)
 {
   "id": "UUID (PK)",
   "usuarioId": "UUID (FK → users.id, NOT NULL)",
@@ -2170,7 +2170,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 params: 'credentialId no path',
                 statusCode: '204 (No Content). 401 Unauthorized, 404 Not Found',
                 response: 'Sem corpo. 204 No Content.',
-                notes: 'Credencial usa soft delete (ativo=false + dataDesativacao).'
+                notes: 'Credencial: delete físico (não existe desativação).'
             },
             ],
             // #endregion
@@ -5248,7 +5248,9 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                     cargo: 'Desenvolvedor',
                     departamento: 'TI',
                     tipoContrato: 'CLT',
+                    contratoAtivo: true,
                     dataAdmissao: '2020-01-15',
+                    dataDemissao: '',
                     salarioMensal: 'R$ 8.000,00',
                     salarioHora: 'R$ 45,45',
                     telefone: { codigoPais: '+55', ddd: '11', numero: '98765-4321' },
@@ -5265,7 +5267,9 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                     cargo: 'Analista de RH',
                     departamento: 'RH',
                     tipoContrato: 'CLT',
+                    contratoAtivo: true,
                     dataAdmissao: '2019-06-10',
+                    dataDemissao: '',
                     salarioMensal: 'R$ 6.500,00',
                     salarioHora: 'R$ 36,93',
                     telefone: { codigoPais: '+55', ddd: '21', numero: '99876-5432' },
@@ -5323,15 +5327,17 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                     // Aba Contrato
                     const contratoInputs = contentEl.querySelectorAll('#perfil-func-tab-contrato-content input[type="text"], #perfil-func-tab-contrato-content input[type="date"]');
                     const contratoSelect = contentEl.querySelector('#perfil-func-tab-contrato-content select');
-                    if (contratoInputs.length >= 4) {
-                        contratoInputs[0].value = dados.cargo; // Cargo
-                        contratoInputs[1].value = dados.departamento; // Departamento
-                        contratoInputs[2].value = dados.dataAdmissao; // Data Admissão
-                        contratoInputs[3].value = dados.salarioMensal; // Salário Mensal
+                    if (contratoInputs.length >= 6) {
+                        contratoInputs[0].value = dados.cargo ?? '';           // Cargo
+                        contratoInputs[1].value = dados.departamento ?? '';   // Departamento
+                        contratoInputs[2].value = dados.dataAdmissao ?? '';   // Data Admissão
+                        contratoInputs[3].value = dados.dataDemissao ?? '';   // Data Demissão
+                        contratoInputs[4].value = dados.salarioMensal ?? '';  // Salário Mensal
+                        contratoInputs[5].value = dados.salarioHora ?? '';    // Salário Hora
                     }
                     if (contratoSelect) contratoSelect.value = dados.tipoContrato;
                     const contratoAtivoCheckbox = contentEl.querySelector('#perfil-func-contrato-ativo');
-                    if (contratoAtivoCheckbox) contratoAtivoCheckbox.checked = dados.ativo;
+                    if (contratoAtivoCheckbox) contratoAtivoCheckbox.checked = dados.contratoAtivo !== undefined ? dados.contratoAtivo : true;
                     
                     // Aba Jornada
                     const jornadaSelect = contentEl.querySelector('#perfil-func-tab-jornada-content select');

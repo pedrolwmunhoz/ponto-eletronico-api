@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- USUÁRIO - Tabelas compartilhadas (funcionários e empresas)
 -- ============================================================================
 
--- 18. usuario_telefone (delete físico; sem ativo/data_desativacao)
+-- 18. usuario_telefone (delete físico)
 CREATE TABLE IF NOT EXISTS usuario_telefone (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -441,7 +441,7 @@ CREATE TABLE IF NOT EXISTS metricas_diaria_empresa_lock (
 -- Cadastro de empresa: cria user_credential (valor=email, tipo=EMAIL) + user_password
 -- ============================================================================
 
--- 34. user_credential (delete físico; sem ativo/data_desativacao)
+-- 34. user_credential (delete físico)
 CREATE TABLE IF NOT EXISTS user_credential (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
