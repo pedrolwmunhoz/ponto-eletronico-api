@@ -12,8 +12,8 @@ public record PontoListagemResponse(
             String diaSemana,
             String status,
             List<MarcacaoResponse> marcacoes,
-            String totalHoras
-
+            String totalHoras,
+            Integer quantidadeRegistros
 ) {
     /** tipo: "ENTRADA" ou "SAIDA" */
     public record MarcacaoResponse(

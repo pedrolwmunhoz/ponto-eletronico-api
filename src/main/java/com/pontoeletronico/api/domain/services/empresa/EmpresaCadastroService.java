@@ -1,13 +1,16 @@
 package com.pontoeletronico.api.domain.services.empresa;
 
+import com.pontoeletronico.api.domain.entity.empresa.EmpresaCompliance;
 import com.pontoeletronico.api.domain.enums.MensagemErro;
 import com.pontoeletronico.api.domain.services.audit.AuditoriaRegistroAsyncService;
 import com.pontoeletronico.api.exception.ConflitoException;
 import com.pontoeletronico.api.exception.TipoCredencialNaoEncontradoException;
 import com.pontoeletronico.api.exception.TipoUsuarioNaoEncontradoException;
 import com.pontoeletronico.api.infrastructure.input.dto.empresa.EmpresaCreateRequest;
+import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaComplianceRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaDadosFiscalRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaEnderecoRepository;
+import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoModeloPontoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoUsuarioRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.usuario.UsersRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.usuario.UsuarioTelefoneRepository;
@@ -30,6 +33,8 @@ public class EmpresaCadastroService {
     private static final String TIPO_CREDENCIAL_CNPJ = "CNPJ";
     private static final String CATEGORIA_CREDENCIAL_PRIMARIO = "PRIMARIO";
     private static final String ACAO_CADASTRO_EMPRESA = "CADASTRO_EMPRESA";
+    private static final String TIPO_MODELO_PONTO_ELETRONICO = "ELETRONICO";
+    private static final int TEMPO_RETENCAO_ANOS_PADRAO = 5;
 
     private final UsersRepository usersRepository;
     private final TipoUsuarioRepository tipoUsuarioRepository;
@@ -39,6 +44,8 @@ public class EmpresaCadastroService {
     private final TipoCategoriaCredentialRepository tipoCategoriaCredentialRepository;
     private final EmpresaDadosFiscalRepository empresaDadosFiscalRepository;
     private final EmpresaEnderecoRepository empresaEnderecoRepository;
+    private final EmpresaComplianceRepository empresaComplianceRepository;
+    private final TipoModeloPontoRepository tipoModeloPontoRepository;
     private final UsuarioTelefoneRepository usuarioTelefoneRepository;
     private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
     private final PasswordEncoder passwordEncoder;
@@ -51,6 +58,8 @@ public class EmpresaCadastroService {
                           TipoCategoriaCredentialRepository tipoCategoriaCredentialRepository,
                           EmpresaDadosFiscalRepository empresaDadosFiscalRepository,
                           EmpresaEnderecoRepository empresaEnderecoRepository,
+                          EmpresaComplianceRepository empresaComplianceRepository,
+                          TipoModeloPontoRepository tipoModeloPontoRepository,
                           UsuarioTelefoneRepository usuarioTelefoneRepository,
                           AuditoriaRegistroAsyncService auditoriaRegistroAsyncService,
                           PasswordEncoder passwordEncoder) {
@@ -62,6 +71,8 @@ public class EmpresaCadastroService {
         this.tipoCategoriaCredentialRepository = tipoCategoriaCredentialRepository;
         this.empresaDadosFiscalRepository = empresaDadosFiscalRepository;
         this.empresaEnderecoRepository = empresaEnderecoRepository;
+        this.empresaComplianceRepository = empresaComplianceRepository;
+        this.tipoModeloPontoRepository = tipoModeloPontoRepository;
         this.usuarioTelefoneRepository = usuarioTelefoneRepository;
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
         this.passwordEncoder = passwordEncoder;
@@ -133,6 +144,19 @@ public class EmpresaCadastroService {
             }
             userCredentialRepository.insert(UUID.randomUUID(), empresaId, tipoTelefoneId, categoriaPrimarioId, valorTelefone);
         }
+
+        var tipoModeloPonto = tipoModeloPontoRepository.findByDescricao(TIPO_MODELO_PONTO_ELETRONICO)
+                .orElseThrow(() -> new IllegalStateException("Tipo modelo ponto ELETRONICO não encontrado no cadastro"));
+        var compliance = new EmpresaCompliance();
+        compliance.setId(UUID.randomUUID());
+        compliance.setEmpresaId(empresaId);
+        compliance.setControlePontoObrigatorio(true);
+        compliance.setTipoModeloPontoId(tipoModeloPonto.getId());
+        compliance.setTempoRetencaoAnos(TEMPO_RETENCAO_ANOS_PADRAO);
+        compliance.setAuditoriaAtiva(true);
+        compliance.setAssinaturaDigitalObrigatoria(true);
+        compliance.setUpdatedAt(dataCriacao);
+        empresaComplianceRepository.save(compliance);
 
         registrarAuditoriaEmpresa(empresaId, true, null, dataCriacao, httpRequest);
         return empresaId;

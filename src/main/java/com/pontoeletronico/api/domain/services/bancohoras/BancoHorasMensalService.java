@@ -30,12 +30,32 @@ public class BancoHorasMensalService {
     }
 
     /**
-     * Recalcula o banco_horas_mensal do mês a partir das jornadas (entrada manual e soft delete).
-     * Obtém ou cria o registro, zera totais, lista jornadas ativas do mês e soma totalHorasEsperadas e totalHorasTrabalhadas.
-     * Não usado pelo aplicativo (lá usa {@link #acumularNoMensal}).
+     * Recalcula o banco_horas_mensal a partir do objeto (jornada afetada ano/mes + anterior/posterior se em outro mês).
+     * Sempre recalcula o mês da jornada afetada. Recalcula mês da jornada anterior só se ano/mes diferente do afetado.
+     * Recalcula mês da jornada posterior só se ano/mes diferente do afetado.
      */
     @Transactional
-    public void recalcularMensal(UUID funcionarioId, UUID empresaId, int ano, int mes) {
+    public void recalcularMensal(UUID funcionarioId, UUID empresaId, RangeJornadasAfetadas range) {
+        int ano = range.getJornadaAfetadaAno();
+        int mes = range.getJornadaAfetadaMes();
+        recalcularMensalApenas(funcionarioId, empresaId, ano, mes);
+
+        if (range.getJornadaAnteriorAno() != null && range.getJornadaAnteriorMes() != null) {
+            if (range.getJornadaAnteriorAno() != ano || range.getJornadaAnteriorMes() != mes) {
+                recalcularMensalApenas(funcionarioId, empresaId, range.getJornadaAnteriorAno(), range.getJornadaAnteriorMes());
+            }
+        }
+        if (range.getJornadaPosteriorAno() != null && range.getJornadaPosteriorMes() != null) {
+            if (range.getJornadaPosteriorAno() != ano || range.getJornadaPosteriorMes() != mes) {
+                recalcularMensalApenas(funcionarioId, empresaId, range.getJornadaPosteriorAno(), range.getJornadaPosteriorMes());
+            }
+        }
+    }
+
+    /**
+     * Recalcula apenas o mês indicado a partir dos resumos (jornadas) do mês.
+     */
+    private void recalcularMensalApenas(UUID funcionarioId, UUID empresaId, int ano, int mes) {
         LocalDate inicio = LocalDate.of(ano, mes, 1);
         LocalDate fim = inicio.withDayOfMonth(inicio.lengthOfMonth());
 

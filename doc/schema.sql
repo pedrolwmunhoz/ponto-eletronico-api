@@ -571,6 +571,7 @@ CREATE TABLE IF NOT EXISTS resumo_ponto_dia (
     total_horas_trabalhadas         VARCHAR(20) NOT NULL DEFAULT 'PT0S',
     total_horas_trabalhadas_feriado VARCHAR(20) NOT NULL DEFAULT 'PT0S',
     total_horas_esperadas           VARCHAR(20) NOT NULL DEFAULT 'PT0S',
+    quantidade_registros            INTEGER NOT NULL DEFAULT 0,
     inconsistente           BOOLEAN NOT NULL DEFAULT false,
     motivo_inconsistencia   VARCHAR(50) NULL,
     created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

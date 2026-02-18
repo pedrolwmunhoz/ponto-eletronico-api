@@ -41,6 +41,7 @@ public class CalcularResumoDiaUtils {
         resumo.setTotalHorasEsperadas(config.cargaDiaria());
         resumo.setInconsistente(registros.size() % 2 != 0);
         resumo.setMotivoInconsistencia(registros.size() % 2 != 0 ? "IMPAR" : null);
+        resumo.setQuantidadeRegistros(registros.size());
         calcularHoraFeriado(resumo, resumo.getEmpresaId(), resumo.getPrimeiraBatida(), resumo.getUltimaBatida(), registros);
         handleInconsistente(resumo, resumo.getFuncionarioId(), resumo.getPrimeiraBatida(), resumo.getUltimaBatida(), registros);
     }

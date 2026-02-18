@@ -41,6 +41,9 @@ public class ResumoPontoDia {
     @Column(name = "total_horas_esperadas", nullable = false, length = 20)
     private Duration totalHorasEsperadas = Duration.ZERO;
 
+    @Column(name = "quantidade_registros", nullable = false)
+    private Integer quantidadeRegistros = 0;
+
     @Column(name = "inconsistente", nullable = false)
     private Boolean inconsistente = false;
 

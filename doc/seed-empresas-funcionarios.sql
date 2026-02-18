@@ -211,13 +211,13 @@ BEGIN
           id, funcionario_id, empresa_id,
           primeira_batida, ultima_batida,
           total_horas_trabalhadas, total_horas_esperadas,
-          inconsistente, created_at
+          quantidade_registros, inconsistente, created_at
         )
         VALUES (
           v_resumo_id, v_func_id, v_empresa_id,
           v_entrada1, v_saida2,
           v_carga_diaria, v_carga_diaria,
-          false, v_entrada1
+          4, false, v_entrada1
         );
 
         INSERT INTO registro_ponto (id, idempotency_key, usuario_id, dia_semana, dispositivo_id, tipo_marcacao_id, tipo_entrada, created_at)

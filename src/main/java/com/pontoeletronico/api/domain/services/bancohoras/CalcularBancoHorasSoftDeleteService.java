@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Lógica separada - calcular banco horas após soft delete de registro.
@@ -49,28 +50,24 @@ public class CalcularBancoHorasSoftDeleteService {
     @Transactional
     public void processarSoftDelete(UUID funcionarioId, UUID empresaId, UUID idRegistroDeletado, LocalDateTime dataRegistroDeletado, JornadaConfig jornadaConfig) {
 
+
+        var range = new RangeJornadasAfetadas();
+        Duration totalTrabalhadoJornadaAfetadaAntes = Duration.ZERO;
+        Duration totalTrabalhadoJornadaPosteriorAntes = Duration.ZERO;
+        DeltaJornadasAfetadas deltaJornadasAfetadas = new DeltaJornadasAfetadas();
+
         // Buscar QUAL jornada vai ser afetada - por id do registro deletado na xref
         ResumoPontoDia jornadaAfetada = xrefPontoResumoRepository.findResumoPontoDiaByRegistroPontoId(idRegistroDeletado)
         .orElseThrow(() -> new RegistroNaoEncontradoException("Jornada não encontrada para o registro deletado"));
-        
-        Optional<BancoHorasMensal> bancoHorasMensal = bancoHorasMensalRepository
-        .findByFuncionarioIdAndAnoRefAndMesRef(
-            funcionarioId, 
-            dataRegistroDeletado.getYear(), 
-            dataRegistroDeletado.getMonthValue()
-        );
-
-        Duration totalTrabalhadoAntes = Duration.ZERO;
-        if(bancoHorasMensal.isPresent()) {
-            totalTrabalhadoAntes = bancoHorasMensal.get().getTotalHorasTrabalhadas();
-        }
 
         var listaRegistrosJornadaAfetada = xrefPontoResumoRepository
         .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId());
         
         if (listaRegistrosJornadaAfetada.size() == 1) {
             apagarJornadaAndXref(jornadaAfetada.getId());
-            calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+            range.setJornadaAfetadaAno(dataRegistroDeletado.getYear());
+            range.setJornadaAfetadaMes(dataRegistroDeletado.getMonthValue());
+            calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, range);
             return;
         }
         
@@ -85,26 +82,22 @@ public class CalcularBancoHorasSoftDeleteService {
                 .filter(reg -> reg.getCreatedAt().isBefore(dataRegistroDeletado))
                 .max(Comparator.comparing(RegistroPonto::getCreatedAt));
 
-        // Pegar somente os registros antes da data; os demais são excluídos/ignorados
-        List<RegistroPonto> listaRegistrosJornadaAfetadaAnterior = new ArrayList<>();
-        for (RegistroPonto reg : listaRegistrosJornadaAfetada) {
-            if (reg.getCreatedAt().isBefore(dataRegistroDeletado)) {
-                listaRegistrosJornadaAfetadaAnterior.add(reg);
-            }
-        }
+        // Pegar somente os registros antes da data, ordenados por data (CreatedAt); os demais são excluídos/ignorados
+        List<RegistroPonto> listaRegistrosJornadaAfetadaAnterior = listaRegistrosJornadaAfetada.stream()
+                .filter(reg -> reg.getCreatedAt().isBefore(dataRegistroDeletado))
+                .sorted(Comparator.comparing(RegistroPonto::getCreatedAt))
+                .collect(Collectors.toList());
 
         // Pegar registro posterior por data
         Optional<RegistroPonto> registroPosterior = listaRegistrosJornadaAfetada.stream()
                 .filter(reg -> reg.getCreatedAt().isAfter(dataRegistroDeletado))
                 .min(Comparator.comparing(RegistroPonto::getCreatedAt));
 
-       // Pegar somente os registros antes da data; os demais são excluídos/ignorados
-       List<RegistroPonto> listaRegistrosJornadaAfetadaPosterior = new ArrayList<>();
-       for (RegistroPonto reg : listaRegistrosJornadaAfetada) {
-           if (reg.getCreatedAt().isAfter(dataRegistroDeletado)) {
-               listaRegistrosJornadaAfetadaPosterior.add(reg);
-           }
-       }
+       // Pegar somente os registros após a data, ordenados por data (CreatedAt)
+       List<RegistroPonto> listaRegistrosJornadaAfetadaPosterior = listaRegistrosJornadaAfetada.stream()
+               .filter(reg -> reg.getCreatedAt().isAfter(dataRegistroDeletado))
+               .sorted(Comparator.comparing(RegistroPonto::getCreatedAt))
+               .collect(Collectors.toList());
 
         // Se existir registro anterior e posterior calcular a distancia entre eles
         if(registroAnterior.isPresent() && registroPosterior.isPresent()) {
@@ -118,8 +111,21 @@ public class CalcularBancoHorasSoftDeleteService {
             // Se a distância em segundos entre anterior e posterior for maior ou igual ao tempoDescansoEntreJornada em segundos, divide jornada afetada ao meio
             if (distanciaEmSegundos >= tempoDescansoEntreJornada.getSeconds()) {
 
+                LocalDateTime dataPrimeiraBatidaAfetadaAnterior = listaRegistrosJornadaAfetadaAnterior.get(0).getCreatedAt();
+                LocalDateTime dataPrimeiraBatidaAfetadaPosterior = listaRegistrosJornadaAfetadaPosterior.get(0).getCreatedAt();
+
+
+                Optional<BancoHorasMensal> bancoHorasMensalAfetadaAntes = bancoHorasMensalRepository.findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, dataPrimeiraBatidaAfetadaAnterior.getYear(), dataPrimeiraBatidaAfetadaAnterior.getMonthValue());
+                totalTrabalhadoJornadaAfetadaAntes = bancoHorasMensalAfetadaAntes.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+                Optional<BancoHorasMensal> bancoHorasMensalAfetadaAntesPosterior = bancoHorasMensalRepository.findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, dataPrimeiraBatidaAfetadaPosterior.getYear(), dataPrimeiraBatidaAfetadaPosterior.getMonthValue());
+                totalTrabalhadoJornadaPosteriorAntes = bancoHorasMensalAfetadaAntesPosterior.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+
+                deltaJornadasAfetadas.setDataRefAfetada(dataPrimeiraBatidaAfetadaAnterior.toLocalDate());
+                deltaJornadasAfetadas.setDataRefPosterior(dataPrimeiraBatidaAfetadaPosterior.toLocalDate());
+
                 var now = LocalDateTime.now();
                 UUID idNovaJornadaAfetadaAnterior = UUID.randomUUID();
+
                 criarJornadaDividida(idNovaJornadaAfetadaAnterior, funcionarioId, empresaId, now, listaRegistrosJornadaAfetadaAnterior, jornadaConfig);
 
                 UUID idNovaJornadaAfetadaPosterior = UUID.randomUUID();
@@ -134,7 +140,31 @@ public class CalcularBancoHorasSoftDeleteService {
                     inserirXrefPontoResumo(funcionarioId, idNovaJornadaAfetadaPosterior, registro.getId(), registro.getCreatedAt());
                 }
                 apagarJornadaAndXref(jornadaAfetada.getId());
-                // Jornada original já foi substituída pelas duas novas; não recalcular/salvar a entidade deletada
+
+                range.setJornadaAfetadaAno(dataRegistroDeletado.getYear());
+                range.setJornadaAfetadaMes(dataRegistroDeletado.getMonthValue());
+                var primeiraPosterior = listaRegistrosJornadaAfetadaPosterior.get(0).getCreatedAt();
+                range.setJornadaPosteriorAno(primeiraPosterior.getYear());
+                range.setJornadaPosteriorMes(primeiraPosterior.getMonthValue());
+
+
+                calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, range);
+
+                var bancoHorasMensalDepois = bancoHorasMensalRepository
+                .findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+                Duration totalTrabalhadoJornadaAfetadaDepois = bancoHorasMensalDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+                Duration deltaTotalTrabalhadoJornadaAfetada = totalTrabalhadoJornadaAfetadaDepois.minus(totalTrabalhadoJornadaAfetadaAntes);
+                deltaJornadasAfetadas.setDeltaHorasAfetada(deltaTotalTrabalhadoJornadaAfetada);
+
+                if(range.getJornadaPosteriorAno() != null && range.getJornadaPosteriorMes() != null) {
+                    var bancoHorasMensalJornadaPosteriorDepois = bancoHorasMensalRepository
+                    .findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, range.getJornadaPosteriorAno(), range.getJornadaPosteriorMes());
+                    Duration totalTrabalhadoJornadaPosteriorDepois = bancoHorasMensalJornadaPosteriorDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+                    Duration deltaTotalTrabalhadoJornadaPosterior = totalTrabalhadoJornadaPosteriorDepois.minus(totalTrabalhadoJornadaPosteriorAntes);
+                    deltaJornadasAfetadas.setDeltaHorasPosterior(deltaTotalTrabalhadoJornadaPosterior);
+                }
+                metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculoDelta(empresaId, deltaJornadasAfetadas);
+                return;
             } else {
                 recalcularJornadaAfetada(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
             }
@@ -143,44 +173,25 @@ public class CalcularBancoHorasSoftDeleteService {
             recalcularJornadaAfetada(jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig);
         }
 
-
-        var primeiraBatida = jornadaAfetada.getPrimeiraBatida();
-        var ultimaBatida = jornadaAfetada.getUltimaBatida();
-
-        LocalDateTime rangeAnterior = primeiraBatida.minus(tempoDescansoEntreJornada).plus(1, ChronoUnit.MILLIS);
-        LocalDateTime rangePosterior = ultimaBatida.plus(tempoDescansoEntreJornada).minus(1, ChronoUnit.MILLIS);
-        Optional<ResumoPontoDia> jornadaAfetadaAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenDesc(funcionarioId, rangeAnterior, primeiraBatida);
-        Optional<ResumoPontoDia> jornadaAfetadaPosterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(funcionarioId, ultimaBatida, rangePosterior);
-        if (jornadaAfetadaAnterior.isPresent()) {
-            ResumoPontoDia jornadaAfetadaAnteriorObj = jornadaAfetadaAnterior.get();
-            LocalDateTime anterior = jornadaAfetadaAnteriorObj.getUltimaBatida();   
-            long distanciaEmSegundosAnterior = Duration.between(anterior, primeiraBatida).getSeconds();
-            
-            if (distanciaEmSegundosAnterior > 0 ) {
-                juntarJornadas(funcionarioId,jornadaAfetada, jornadaAfetadaAnteriorObj, listaRegistrosJornadaAfetada, jornadaConfig);
-            }
-
-        }
-
-        if (jornadaAfetadaPosterior.isPresent()) {
-            ResumoPontoDia jornadaAfetadaPosteriorObj = jornadaAfetadaPosterior.get();
-            LocalDateTime posterior = jornadaAfetadaPosteriorObj.getPrimeiraBatida();
-            long distanciaEmSegundosPosterior = Duration.between(ultimaBatida, posterior).getSeconds();
-    
-            if (distanciaEmSegundosPosterior > 0) {
-                juntarJornadas(funcionarioId, jornadaAfetada, jornadaAfetadaPosteriorObj, listaRegistrosJornadaAfetada, jornadaConfig);
-            }
-        }
-
-        calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
+        calcularBancoHorasMensal.recalcularMensal(funcionarioId, empresaId, range);
 
         var bancoHorasMensalDepois = bancoHorasMensalRepository
                 .findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, dataRegistroDeletado.getYear(), dataRegistroDeletado.getMonthValue());
-        Duration totalTrabalhadoDepois = bancoHorasMensalDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
-        Duration deltaTotalTrabalhadoJornadaAfetada = totalTrabalhadoDepois.minus(totalTrabalhadoAntes);
+        Duration totalTrabalhadoJornadaAfetadaDepois = bancoHorasMensalDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+        Duration deltaTotalTrabalhadoJornadaAfetada = totalTrabalhadoJornadaAfetadaDepois.minus(totalTrabalhadoJornadaAfetadaAntes);
+        deltaJornadasAfetadas.setDeltaHorasAfetada(deltaTotalTrabalhadoJornadaAfetada);
 
-        metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculo(empresaId, dataRegistroDeletado.toLocalDate(), -1, deltaTotalTrabalhadoJornadaAfetada);
+        if(range.getJornadaPosteriorAno() != null && range.getJornadaPosteriorMes() != null) {
+            var bancoHorasMensalJornadaPosteriorDepois = bancoHorasMensalRepository
+            .findByFuncionarioIdAndAnoRefAndMesRef(funcionarioId, range.getJornadaPosteriorAno(), range.getJornadaPosteriorMes());
+            Duration totalTrabalhadoJornadaPosteriorDepois = bancoHorasMensalJornadaPosteriorDepois.map(BancoHorasMensal::getTotalHorasTrabalhadas).orElse(Duration.ZERO);
+            Duration deltaTotalTrabalhadoJornadaPosterior = totalTrabalhadoJornadaPosteriorDepois.minus(totalTrabalhadoJornadaPosteriorAntes);
+            deltaJornadasAfetadas.setDeltaHorasPosterior(deltaTotalTrabalhadoJornadaPosterior);
+        }
+        metricasDiariaEmpresaContadorService.ajustarMetricasAposRecalculoDelta(empresaId, deltaJornadasAfetadas);
+    
     }
+
 
     private void inserirXrefPontoResumo( UUID funcionarioId, UUID idJornadaNova, UUID idRegistroPonto, LocalDateTime dataRegistro) {
         if (xrefPontoResumoRepository.existsByRegistroPontoId(idRegistroPonto)) {

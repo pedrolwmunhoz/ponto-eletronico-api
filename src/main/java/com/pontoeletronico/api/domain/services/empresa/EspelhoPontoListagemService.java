@@ -58,7 +58,7 @@ public class EspelhoPontoListagemService {
     }
 
     private static String formatDurationToHHmm(String s) {
-        if (s == null || s.isBlank()) return "—";
+        if (s == null || s.isBlank()) return "00:00";
         try {
             Duration d = Duration.parse(s);
             long totalMinutes = d.toMinutes();
@@ -66,7 +66,7 @@ public class EspelhoPontoListagemService {
             long m = Math.abs(totalMinutes % 60);
             return String.format("%02d:%02d", h, m);
         } catch (Exception e) {
-            return "—";
+            return "00:00";
         }
     }
 }

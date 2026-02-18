@@ -72,6 +72,7 @@ public class FuncionarioRegistroPontoService {
     private static final int IDX_STATUS = 3;
     private static final int IDX_TOTAL_HORAS_RAW = 4;
     private static final int IDX_MARCADOES_JSON = 5;
+    private static final int IDX_QUANTIDADE_REGISTROS = 6;
 
     /** Doc id 28: Lista todas as jornadas do mês (resumo_ponto_dia) e todos os registros de cada uma (xref + registro_ponto). Período = mês inteiro (dia 1 ao último dia). Data = primeira batida. Jornada sequencial 1, 2, 3... */
     public List<PontoListagemResponse> listarPontoFuncionario(UUID funcionarioId, int ano, int mes, HttpServletRequest httpRequest) {
@@ -107,7 +108,13 @@ public class FuncionarioRegistroPontoService {
                     }
                 } catch (Exception ignored) { }
             }
-            result.add(new PontoListagemResponse(jornada, data, diaSemana, status, marcacoes, totalHoras));
+            Integer quantidadeRegistros = 0;
+            if (row.length > IDX_QUANTIDADE_REGISTROS && row[IDX_QUANTIDADE_REGISTROS] != null) {
+                if (row[IDX_QUANTIDADE_REGISTROS] instanceof Number n) {
+                    quantidadeRegistros = n.intValue();
+                }
+            }
+            result.add(new PontoListagemResponse(jornada, data, diaSemana, status, marcacoes, totalHoras, quantidadeRegistros));
         }
         return result;
     }

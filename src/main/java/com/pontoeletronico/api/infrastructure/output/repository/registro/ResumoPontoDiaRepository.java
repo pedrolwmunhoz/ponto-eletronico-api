@@ -26,7 +26,8 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
            FROM registro_ponto rp
            INNER JOIN xref_ponto_resumo xref ON rp.id = xref.registro_ponto_id
            WHERE xref.resumo_ponto_dia_id = r.id
-          )
+          ),
+          COALESCE(r.quantidade_registros, 0)
         FROM resumo_ponto_dia r
         WHERE r.funcionario_id = :funcionarioId
           AND r.primeira_batida::date BETWEEN :inicio AND :fim
@@ -36,8 +37,8 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
 
     @Modifying
     @Query(
-        value = "INSERT INTO resumo_ponto_dia (id, funcionario_id, empresa_id, primeira_batida, ultima_batida, total_horas_trabalhadas, total_horas_esperadas, inconsistente, motivo_inconsistencia, created_at) " +
-                "VALUES (:id, :funcionarioId, :empresaId, :primeiraBatida, :ultimaBatida, :totalHorasTrabalhadas, :totalHorasEsperadas, :inconsistente, :motivoInconsistencia, :createdAt)", 
+        value = "INSERT INTO resumo_ponto_dia (id, funcionario_id, empresa_id, primeira_batida, ultima_batida, total_horas_trabalhadas, total_horas_esperadas, quantidade_registros, inconsistente, motivo_inconsistencia, created_at) " +
+                "VALUES (:id, :funcionarioId, :empresaId, :primeiraBatida, :ultimaBatida, :totalHorasTrabalhadas, :totalHorasEsperadas, :quantidadeRegistros, :inconsistente, :motivoInconsistencia, :createdAt)",
         nativeQuery = true
     )
     void insert(
@@ -50,6 +51,7 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
         @Param("totalHorasEsperadas") Duration totalHorasEsperadas,
         @Param("inconsistente") Boolean inconsistente,
         @Param("motivoInconsistencia") String motivoInconsistencia,
+        @Param("quantidadeRegistros") Long quantidadeRegistros,
         @Param("createdAt") LocalDateTime createdAt
     );
     @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) BETWEEN :inicio AND :fim ORDER BY r.primeira_batida ASC, r.created_at ASC", nativeQuery = true)

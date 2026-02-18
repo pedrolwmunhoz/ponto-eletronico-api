@@ -1,8 +1,12 @@
 package com.pontoeletronico.api.domain.services.empresa;
 
 import com.pontoeletronico.api.domain.entity.empresa.MetricasDiariaEmpresa;
+import com.pontoeletronico.api.domain.services.bancohoras.DeltaJornadasAfetadas;
+import com.pontoeletronico.api.domain.services.bancohoras.RangeJornadasAfetadas;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.MetricasDiariaEmpresaRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.MetricasDiariaEmpresaLockRepository;
+
+import org.apache.commons.lang3.Range;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -139,6 +143,19 @@ public class MetricasDiariaEmpresaContadorService {
         return metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(empresaId, dataRef).isPresent();
     }
 
+    public void ajustarMetricasAposRecalculoDelta(UUID empresaId, DeltaJornadasAfetadas deltaJornadasAfetadas) {
+        if (deltaJornadasAfetadas.getDataRefAfetada() != null) {
+            ajustarMetricasAposRecalculo(empresaId, deltaJornadasAfetadas.getDataRefAfetada(), deltaJornadasAfetadas.getDeltaRegistrosPontoAfetada(), deltaJornadasAfetadas.getDeltaHorasAfetada());
+        }
+        if (deltaJornadasAfetadas.getDataRefAnterior() != null && !deltaJornadasAfetadas.getDataRefAnterior().equals(deltaJornadasAfetadas.getDataRefAfetada())) {
+            ajustarMetricasAposRecalculo(empresaId, deltaJornadasAfetadas.getDataRefAnterior(), deltaJornadasAfetadas.getDeltaRegistrosPontoAnterior(), deltaJornadasAfetadas.getDeltaHorasAnterior());
+        }
+
+        if (deltaJornadasAfetadas.getDataRefPosterior() != null && !deltaJornadasAfetadas.getDataRefPosterior().equals(deltaJornadasAfetadas.getDataRefAfetada())) {
+            ajustarMetricasAposRecalculo(empresaId, deltaJornadasAfetadas.getDataRefPosterior(), deltaJornadasAfetadas.getDeltaRegistrosPontoPosterior(), deltaJornadasAfetadas.getDeltaHorasPosterior());
+        }
+    }
+
     /**
      * Ajuste de métricas após entrada manual ou soft delete. Chamar sempre.
      * Busca métrica pela data do registro; se não existir, cria nova com data_ref = dataRegistro (data do registro).
@@ -146,6 +163,7 @@ public class MetricasDiariaEmpresaContadorService {
      */
     @Transactional
     public void ajustarMetricasAposRecalculo(UUID empresaId, LocalDate dataRegistro, int deltaRegistrosPonto, Duration deltaHoras) {
+        if (dataRegistro == null) return;
         try {
             adquirirLock(empresaId, dataRegistro);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRegistro);
