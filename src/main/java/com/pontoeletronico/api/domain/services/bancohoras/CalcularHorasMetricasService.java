@@ -15,7 +15,6 @@ import com.pontoeletronico.api.domain.entity.empresa.MetricasDiariaEmpresa;
 import com.pontoeletronico.api.domain.entity.registro.RegistroPonto;
 import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
-import com.pontoeletronico.api.infrastructure.output.repository.bancohoras.BancoHorasMensalRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.MetricasDiariaEmpresaRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoPontoDiaRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.RegistroPontoRepository;
@@ -42,35 +41,33 @@ public class CalcularHorasMetricasService {
     private final BancoHorasMensalService calcularBancoHorasMensal;
     private final CalcularResumoDiaUtils calcularResumoDiaUtils;
     private final MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService;
-    private final BancoHorasMensalRepository bancoHorasMensalRepository;
     private final MetricasDiariaEmpresaRepository metricasDiariaEmpresaRepository;
 
     
     public void calcularHorasAposEntradaManual(UUID empresaId, RegistroPonto registroPonto, JornadaConfig jornadaConfig) {
          
-        DeltaJornadasAfetadas deltaJornadasAfetadas = new DeltaJornadasAfetadas();
-
-        Duration totalAfetadaDepois = Duration.ZERO;
+        UUID jornadaAfetadaId = null;
         Duration totalAfetadaAntes = Duration.ZERO;
+        Duration totalAfetadaDepois = Duration.ZERO;
+        RangeJornadasAfetadas range = new RangeJornadasAfetadas();
         var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
+        DeltaJornadasAfetadas deltaJornadasAfetadas = new DeltaJornadasAfetadas();
         LocalDateTime dataAtualInicio = registroPonto.getCreatedAt();
         LocalDateTime dataAtualFim = registroPonto.getCreatedAt();
         
         LocalDateTime inicioRangeJornada = dataAtualInicio.minus(tempoDescansoEntreJornada).plus(1, ChronoUnit.MILLIS);
         LocalDateTime fimRangeJornada = dataAtualFim.plus(tempoDescansoEntreJornada).minus(1, ChronoUnit.MILLIS);
         
-        RangeJornadasAfetadas range = new RangeJornadasAfetadas();
 
         Optional<ResumoPontoDia> jornadaAfetadaoOpt = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(registroPonto.getUsuarioId(), inicioRangeJornada, dataAtualInicio);
 
-        UUID jornadaAfetadaId = null;
         if(jornadaAfetadaoOpt.isPresent()) {
 
-            ResumoPontoDia jornadaAfetada = jornadaAfetadaoOpt.get();
+            var jornadaAfetada = jornadaAfetadaoOpt.get();
             totalAfetadaAntes = jornadaAfetada.getTotalHorasTrabalhadas();
             
             jornadaAfetadaId = jornadaAfetada.getId();
-            handleJornadaAfetada(empresaId, jornadaAfetada, registroPonto, jornadaConfig, range, deltaJornadasAfetadas);
+            handleJornadaAfetada(empresaId, jornadaAfetada, tempoDescansoEntreJornada, registroPonto, jornadaConfig, range, deltaJornadasAfetadas);
             totalAfetadaDepois = jornadaAfetada.getTotalHorasTrabalhadas(); 
             deltaJornadasAfetadas.setDataRefAfetada(jornadaAfetada.getPrimeiraBatida().toLocalDate());
 
@@ -81,7 +78,7 @@ public class CalcularHorasMetricasService {
                 ResumoPontoDia jornadaAfetada = jornadaAfetadaoOpt.get();
                 totalAfetadaAntes = jornadaAfetada.getTotalHorasTrabalhadas();
                 jornadaAfetadaId = jornadaAfetada.getId();
-                handleJornadaAfetada(empresaId, jornadaAfetada, registroPonto, jornadaConfig, range, deltaJornadasAfetadas);
+                handleJornadaAfetada(empresaId, jornadaAfetada, tempoDescansoEntreJornada, registroPonto, jornadaConfig, range, deltaJornadasAfetadas);
                 totalAfetadaDepois = jornadaAfetada.getTotalHorasTrabalhadas();
                 deltaJornadasAfetadas.setDataRefAfetada(jornadaAfetada.getPrimeiraBatida().toLocalDate());
             }else{
@@ -107,9 +104,8 @@ public class CalcularHorasMetricasService {
     }
 
     @Transactional
-    private void handleJornadaAfetada(UUID empresaId, ResumoPontoDia jornadaAfetada, RegistroPonto novoRegistro, JornadaConfig jornadaConfig, RangeJornadasAfetadas range, DeltaJornadasAfetadas deltaJornadasAfetadas) {
+    private void handleJornadaAfetada(UUID empresaId, ResumoPontoDia jornadaAfetada, Duration tempoDescansoEntreJornada, RegistroPonto novoRegistro, JornadaConfig jornadaConfig, RangeJornadasAfetadas range, DeltaJornadasAfetadas deltaJornadasAfetadas) {
         
-        var tempoDescansoEntreJornada = jornadaConfig.tempoDescansoEntreJornada();
         List<RegistroPonto> listaRegistrosJornadaAfetada = xrefPontoResumoRepository
         .listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(jornadaAfetada.getId());
         
@@ -120,73 +116,65 @@ public class CalcularHorasMetricasService {
         LocalDateTime inicioJornadaAfetada = jornadaAfetada.getPrimeiraBatida().minus(1, ChronoUnit.MILLIS);
         LocalDateTime fimJornadaAfetada = jornadaAfetada.getUltimaBatida().plus(1, ChronoUnit.MILLIS);
 
-        LocalDateTime inicioRangeJornadaAfetada = inicioJornadaAfetada.minus(tempoDescansoEntreJornada);
-        LocalDateTime fimRangeJornadaAfetada = fimJornadaAfetada.plus(tempoDescansoEntreJornada);
+        LocalDateTime inicioRangeJornadaAfetadaAnterior = inicioJornadaAfetada.minus(tempoDescansoEntreJornada);
+        LocalDateTime fimRangeJornadaAfetadaAnterior = fimJornadaAfetada.plus(tempoDescansoEntreJornada);
 
         Optional<ResumoPontoDia> jornadaAfetadaAnterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenDesc(
-                novoRegistro.getUsuarioId(), inicioRangeJornadaAfetada, inicioJornadaAfetada);
+                novoRegistro.getUsuarioId(), inicioRangeJornadaAfetadaAnterior, inicioJornadaAfetada);
 
         Optional<ResumoPontoDia> jornadaAfetadaPosterior = xrefPontoResumoRepository.findByFuncionarioIdAndDataBetweenAsc(
-                novoRegistro.getUsuarioId(), fimJornadaAfetada, fimRangeJornadaAfetada);
+                novoRegistro.getUsuarioId(), fimJornadaAfetada, fimRangeJornadaAfetadaAnterior);
         
-        if (jornadaAfetadaAnterior.isPresent()) {
-            ResumoPontoDia jornadaAnterior = jornadaAfetadaAnterior.get();
-            if (jornadaAfetada.getPrimeiraBatida() != null && jornadaAnterior.getUltimaBatida() != null) {
-                Duration durationBetween = Duration.between(jornadaAnterior.getUltimaBatida(), jornadaAfetada.getPrimeiraBatida());
-
-                if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
-                    // juntar lista de registros da jornada anterior e jornada afetada
-                    
-                    range.setJornadaAnteriorAno(jornadaAnterior.getPrimeiraBatida().getYear());
-                    range.setJornadaAnteriorMes(jornadaAnterior.getPrimeiraBatida().getMonthValue());
-                    
-                    LocalDate dataRegistroAfetada = jornadaAfetada.getPrimeiraBatida().toLocalDate();
-                    LocalDate dataRegistroAnterior = jornadaAnterior.getPrimeiraBatida().toLocalDate();
-
-                    if(dataRegistroAfetada != dataRegistroAnterior) {
-                        var quantidade = jornadaAnterior.getQuantidadeRegistros() + jornadaAfetada.getQuantidadeRegistros();
-                        deltaJornadasAfetadas.setDeltaRegistrosPontoAfetada(quantidade);
+         //anterior
+        handleJornadasAPartirDeJornadaAfetada(jornadaAfetadaAnterior, jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig, range, deltaJornadasAfetadas, true);
         
-                        Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(jornadaAfetada.getEmpresaId(), dataRegistroAnterior);
-                        LOGGER_TECNICO.info("Métrica diária empresa encontrada com id: {}", metricasDiariaEmpresa.get().getId());
-                        deletarMetricasDiariaEmpresaById(metricasDiariaEmpresa.get().getId());
+        //posterior
+        handleJornadasAPartirDeJornadaAfetada(jornadaAfetadaPosterior, jornadaAfetada, listaRegistrosJornadaAfetada, jornadaConfig, range, deltaJornadasAfetadas, false);   
+    }
+    private void handleJornadasAPartirDeJornadaAfetada(Optional<ResumoPontoDia> jornadaAfetadaOpt, ResumoPontoDia jornadaAfetada, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig, RangeJornadasAfetadas range, DeltaJornadasAfetadas deltaJornadasAfetadas, boolean isAnterior) {
+        
+        if(jornadaAfetadaOpt.isPresent()) {
+            ResumoPontoDia jornadaOpcional = jornadaAfetadaOpt.get();
+            if (jornadaAfetada.getUltimaBatida() != null && jornadaOpcional.getPrimeiraBatida() != null) {
 
-                        juntarJornadas(jornadaAfetada, jornadaAnterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                        
-                    }else{
-                        juntarJornadas(jornadaAfetada, jornadaAnterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                    
+                Duration durationBetween = Duration.ZERO;
+                if(isAnterior) {
+                    durationBetween = Duration.between(jornadaOpcional.getUltimaBatida(), jornadaAfetada.getPrimeiraBatida());
+                    if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
+                        // juntar lista de registros da jornada anterior e jornada afetada
+                        range.setJornadaAnteriorAno(jornadaOpcional.getPrimeiraBatida().getYear());
+                        range.setJornadaAnteriorMes(jornadaOpcional.getPrimeiraBatida().getMonthValue());
+                        handleRange(range, jornadaOpcional, jornadaAfetada, deltaJornadasAfetadas, listaRegistrosJornadaAfetada, jornadaConfig);
                     }
+                } else {
+                    durationBetween = Duration.between(jornadaAfetada.getUltimaBatida(), jornadaOpcional.getPrimeiraBatida());
+                    if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
+                        // juntar lista de registros da jornada anterior e jornada afetada
+                        range.setJornadaPosteriorAno(jornadaOpcional.getPrimeiraBatida().getYear());
+                        range.setJornadaPosteriorMes(jornadaOpcional.getPrimeiraBatida().getMonthValue());
+                        handleRange(range, jornadaOpcional, jornadaAfetada, deltaJornadasAfetadas, listaRegistrosJornadaAfetada, jornadaConfig);
+                    }                
                 }
+
             }
         }
-        if(jornadaAfetadaPosterior.isPresent()) {
-            ResumoPontoDia jornadaPosterior = jornadaAfetadaPosterior.get();
-            if (jornadaAfetada.getUltimaBatida() != null && jornadaPosterior.getPrimeiraBatida() != null) {
-                Duration durationBetween = Duration.between(jornadaAfetada.getUltimaBatida(), jornadaPosterior.getPrimeiraBatida());
+    }
 
-                if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
-                    // juntar lista de registros da jornada anterior e jornada afetada
+    private void handleRange(RangeJornadasAfetadas range, ResumoPontoDia jornadaOpcional, ResumoPontoDia jornadaAfetada, DeltaJornadasAfetadas deltaJornadasAfetadas, List<RegistroPonto> listaRegistrosJornadaAfetada, JornadaConfig jornadaConfig) {
 
-                    range.setJornadaPosteriorAno(jornadaPosterior.getPrimeiraBatida().getYear());
-                    range.setJornadaPosteriorMes(jornadaPosterior.getPrimeiraBatida().getMonthValue());
-                    
-                    LocalDate dataRegistroAfetada = jornadaAfetada.getPrimeiraBatida().toLocalDate();
-                    LocalDate dataRegistroPosterior = jornadaPosterior.getPrimeiraBatida().toLocalDate();
+        LocalDate dataRegistroAfetada = jornadaAfetada.getPrimeiraBatida().toLocalDate();
+        LocalDate dataRegistroOpcional = jornadaOpcional.getPrimeiraBatida().toLocalDate();
 
-                    if(dataRegistroAfetada != dataRegistroPosterior) {
-                        var quantidade = jornadaAfetada.getQuantidadeRegistros() + jornadaPosterior.getQuantidadeRegistros();
-                        deltaJornadasAfetadas.setDeltaRegistrosPontoAfetada(quantidade);
-                        
-                        Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(jornadaPosterior.getEmpresaId(), dataRegistroPosterior);
-                        LOGGER_TECNICO.info("Métrica diária empresa encontrada com id: {}", metricasDiariaEmpresa.get().getId());
-                        deletarMetricasDiariaEmpresaById(metricasDiariaEmpresa.get().getId());
-                        juntarJornadas(jornadaAfetada, jornadaPosterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                    }else{
-                        juntarJornadas(jornadaAfetada, jornadaPosterior, listaRegistrosJornadaAfetada, jornadaConfig);
-                    }
-                }
-            }
+        if(dataRegistroAfetada != dataRegistroOpcional) {
+            var quantidade = jornadaAfetada.getQuantidadeRegistros() + jornadaOpcional.getQuantidadeRegistros();
+            deltaJornadasAfetadas.setDeltaRegistrosPontoAfetada(quantidade);
+            
+            Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(jornadaOpcional.getEmpresaId(), dataRegistroOpcional);
+            LOGGER_TECNICO.info("Métrica diária empresa encontrada com id: {}", metricasDiariaEmpresa.get().getId());
+            deletarMetricasDiariaEmpresaById(metricasDiariaEmpresa.get().getId());
+            juntarJornadas(jornadaAfetada, jornadaOpcional, listaRegistrosJornadaAfetada, jornadaConfig);
+        }else{
+            juntarJornadas(jornadaAfetada, jornadaOpcional, listaRegistrosJornadaAfetada, jornadaConfig);
         }
     }
 
@@ -204,13 +192,6 @@ public class CalcularHorasMetricasService {
     @Transactional
     private void deletarMetricasDiariaEmpresaById(UUID metricasDiariaEmpresaId) {
         LOGGER_TECNICO.info("Deletando métrica diária empresa com id: {}", metricasDiariaEmpresaId);
-        
-        Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findById(metricasDiariaEmpresaId);
-        
-        if(metricasDiariaEmpresa.isPresent()) {
-
-            MetricasDiariaEmpresa metricasDiariaEmpresaObj = metricasDiariaEmpresa.get();
-        }
         metricasDiariaEmpresaRepository.deleteMetricasDiariaEmpresaById(metricasDiariaEmpresaId);
         LOGGER_TECNICO.info("Métrica diária empresa deletada com sucesso");
     }

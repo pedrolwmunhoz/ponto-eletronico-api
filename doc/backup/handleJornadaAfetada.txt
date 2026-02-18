@@ -1,0 +1,60 @@
+        if (jornadaAfetadaAnterior.isPresent()) {
+            ResumoPontoDia jornadaAnterior = jornadaAfetadaAnterior.get();
+            if (jornadaAfetada.getPrimeiraBatida() != null && jornadaAnterior.getUltimaBatida() != null) {
+                Duration durationBetween = Duration.between(jornadaAnterior.getUltimaBatida(), jornadaAfetada.getPrimeiraBatida());
+
+                if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
+                    // juntar lista de registros da jornada anterior e jornada afetada
+                    
+                    range.setJornadaAnteriorAno(jornadaAnterior.getPrimeiraBatida().getYear());
+                    range.setJornadaAnteriorMes(jornadaAnterior.getPrimeiraBatida().getMonthValue());
+                    
+                    LocalDate dataRegistroAfetada = jornadaAfetada.getPrimeiraBatida().toLocalDate();
+                    LocalDate dataRegistroAnterior = jornadaAnterior.getPrimeiraBatida().toLocalDate();
+
+                    if(dataRegistroAfetada != dataRegistroAnterior) {
+                        var quantidade = jornadaAnterior.getQuantidadeRegistros() + jornadaAfetada.getQuantidadeRegistros();
+                        deltaJornadasAfetadas.setDeltaRegistrosPontoAfetada(quantidade);
+        
+                        Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(jornadaAfetada.getEmpresaId(), dataRegistroAnterior);
+                        LOGGER_TECNICO.info("Métrica diária empresa encontrada com id: {}", metricasDiariaEmpresa.get().getId());
+                        deletarMetricasDiariaEmpresaById(metricasDiariaEmpresa.get().getId());
+
+                        juntarJornadas(jornadaAfetada, jornadaAnterior, listaRegistrosJornadaAfetada, jornadaConfig);
+                        
+                    }else{
+                        juntarJornadas(jornadaAfetada, jornadaAnterior, listaRegistrosJornadaAfetada, jornadaConfig);
+                    
+                    }
+                }
+            }
+        }
+        if(jornadaAfetadaPosterior.isPresent()) {
+            ResumoPontoDia jornadaPosterior = jornadaAfetadaPosterior.get();
+            if (jornadaAfetada.getUltimaBatida() != null && jornadaPosterior.getPrimeiraBatida() != null) {
+                Duration durationBetween = Duration.between(jornadaAfetada.getUltimaBatida(), jornadaPosterior.getPrimeiraBatida());
+
+                if (durationBetween.compareTo(jornadaConfig.tempoDescansoEntreJornada()) < 0) {
+                    // juntar lista de registros da jornada anterior e jornada afetada
+
+                    range.setJornadaPosteriorAno(jornadaPosterior.getPrimeiraBatida().getYear());
+                    range.setJornadaPosteriorMes(jornadaPosterior.getPrimeiraBatida().getMonthValue());
+                    
+                    LocalDate dataRegistroAfetada = jornadaAfetada.getPrimeiraBatida().toLocalDate();
+                    LocalDate dataRegistroPosterior = jornadaPosterior.getPrimeiraBatida().toLocalDate();
+
+                    if(dataRegistroAfetada != dataRegistroPosterior) {
+                        var quantidade = jornadaAfetada.getQuantidadeRegistros() + jornadaPosterior.getQuantidadeRegistros();
+                        deltaJornadasAfetadas.setDeltaRegistrosPontoAfetada(quantidade);
+                        
+                        Optional<MetricasDiariaEmpresa> metricasDiariaEmpresa = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(jornadaPosterior.getEmpresaId(), dataRegistroPosterior);
+                        LOGGER_TECNICO.info("Métrica diária empresa encontrada com id: {}", metricasDiariaEmpresa.get().getId());
+                        deletarMetricasDiariaEmpresaById(metricasDiariaEmpresa.get().getId());
+                        juntarJornadas(jornadaAfetada, jornadaPosterior, listaRegistrosJornadaAfetada, jornadaConfig);
+                    }else{
+                        juntarJornadas(jornadaAfetada, jornadaPosterior, listaRegistrosJornadaAfetada, jornadaConfig);
+                    }
+                }
+            }
+        }
+ 
