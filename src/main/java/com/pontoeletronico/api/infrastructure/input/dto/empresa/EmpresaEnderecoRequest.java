@@ -16,9 +16,9 @@ public record EmpresaEnderecoRequest(
         String rua,
         
         @NotBlank(message = "numero é obrigatório")
-        @Size(min = 1, max = 20, message = "numero deve ter entre 1 e 20 caracteres")
-        @Pattern(regexp = "^[0-9]+$", message = "numero: apenas números")
-        @Schema(description = "Número", example = "1000", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Size(min = 1, max = 4, message = "numero deve ter entre 1 e 4 dígitos")
+        @Pattern(regexp = "^[0-9]{1,4}$", message = "numero: apenas números (1 a 4 dígitos)")
+        @Schema(description = "Número (1 a 4 dígitos, sem máscara)", example = "1000", requiredMode = Schema.RequiredMode.REQUIRED)
         String numero,
         
         @Size(max = 255, message = "complemento deve ter no máximo 255 caracteres")

@@ -82,7 +82,7 @@ public class EmpresaCadastroService {
     /** Doc id 7: Cadastro de empresa. */
     public UUID criar(EmpresaCreateRequest request, HttpServletRequest httpRequest) {
         var emailNormalizado = request.email().trim().toLowerCase(); // ex: "Contato@Empresa.com" -> "contato@empresa.com"
-        var cnpjNormalizado = request.cnpj().replaceAll("\\D", "");   // ex: "12.345.678/0001-90" -> "12345678000190"
+        var cnpjNormalizado = request.cnpj().trim();
         var cepNormalizado = request.empresaEndereco().cep().replaceAll("\\D", ""); // ex: "01310-100" -> "01310100"
 
         if (usersRepository.existsByUsername(request.username()).isPresent()) {

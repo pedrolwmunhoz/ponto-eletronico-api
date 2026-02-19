@@ -1,11 +1,17 @@
 package com.pontoeletronico.api.infrastructure.input.dto.auth;
 
 import com.pontoeletronico.api.domain.enums.TiposCredencial;
+import com.pontoeletronico.api.util.CnpjValidator;
+import com.pontoeletronico.api.util.CpfValidator;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.regex.Pattern;
 
+/**
+ * Valida valor conforme tipo de credencial.
+ * CPF e CNPJ usam os mesmos validadores dos cadastros (CpfValidator, CnpjValidator).
+ */
 public class LoginRequestValidoValidator implements ConstraintValidator<LoginRequestValido, LoginRequest> {
 
     private static final Pattern EMAIL = Pattern.compile(
@@ -29,10 +35,16 @@ public class LoginRequestValidoValidator implements ConstraintValidator<LoginReq
 
         boolean valido = switch (tipo) {
             case EMAIL -> EMAIL.matcher(valor).matches();
-            case CPF -> APENAS_DIGITOS.matcher(valor).matches() && valor.length() == 11;
-            case CNPJ -> APENAS_DIGITOS.matcher(valor).matches() && valor.length() == 14;
+            case CPF -> {
+                String digits = valor.replaceAll("\\D", "");
+                yield digits.length() == 11 && CpfValidator.isValid(digits);
+            }
+            case CNPJ -> {
+                String raw = valor.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+                yield raw.length() == 14 && CnpjValidator.isValid(raw);
+            }
             case TELEFONE -> APENAS_DIGITOS.matcher(valor).matches() && (valor.length() == 10 || valor.length() == 11);
-            case USERNAME -> valor.length() >= 3 && valor.length() <= 255;
+            case USERNAME -> valor.length() >= 2 && valor.length() <= 255;
         };
 
         if (!valido) {

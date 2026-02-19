@@ -11,8 +11,9 @@ public record ContratoFuncionarioRequest(
         @Schema(description = "Matrícula (opcional, única)")
         String matricula,
         
-        @Size(max = 20, message = "pisPasep deve ter no máximo 20 caracteres")
-        @Schema(description = "PIS/PASEP (opcional, único)")
+        @Size(max = 11, message = "pisPasep deve ter 11 dígitos (sem máscara)")
+        @Pattern(regexp = "^(|[0-9]{11})$", message = "PIS/PASEP deve ter 11 dígitos (sem máscara)")
+        @Schema(description = "PIS/PASEP (opcional, único). Enviar só dígitos, 11 caracteres.")
         String pisPasep,
         
         @NotBlank(message = "cargo é obrigatório")

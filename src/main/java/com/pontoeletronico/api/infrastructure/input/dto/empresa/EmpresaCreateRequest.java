@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.pontoeletronico.api.infrastructure.input.dto.empresa.CnpjValido;
 
 /** Doc id 7: Cadastro de empresa - Request. */
 @Schema(description = "Requisição de cadastro de empresa")
@@ -36,8 +37,8 @@ public record EmpresaCreateRequest(
         String razaoSocial,
         
         @NotBlank(message = "cnpj é obrigatório")
-        @Pattern(regexp = "^\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}$", message = "CNPJ inválido")
-        @Schema(description = "CNPJ (14 dígitos, com ou sem formatação)", example = "12.345.678/0001-90", requiredMode = Schema.RequiredMode.REQUIRED)
+        @CnpjValido(message = "CNPJ inválido")
+        @Schema(description = "CNPJ: 14 dígitos (formato atual) ou 12 alfanuméricos + 2 dígitos (formato 2026), com ou sem formatação", example = "12.345.678/0001-90", requiredMode = Schema.RequiredMode.REQUIRED)
         String cnpj,
         
         @NotNull(message = "empresaEndereco é obrigatório")

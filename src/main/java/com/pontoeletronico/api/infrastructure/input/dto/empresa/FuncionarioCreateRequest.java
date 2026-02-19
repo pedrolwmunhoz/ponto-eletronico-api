@@ -3,6 +3,7 @@ package com.pontoeletronico.api.infrastructure.input.dto.empresa;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
+import com.pontoeletronico.api.infrastructure.input.dto.empresa.CpfValido;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -32,8 +33,8 @@ public record FuncionarioCreateRequest(
         String ultimoNome,
         
         @NotBlank(message = "cpf é obrigatório")
-        @Pattern(regexp = "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$", message = "CPF inválido")
-        @Schema(description = "CPF (11 dígitos)", example = "123.456.789-00", requiredMode = Schema.RequiredMode.REQUIRED)
+        @CpfValido(message = "CPF inválido")
+        @Schema(description = "CPF (11 dígitos, sem máscara)", example = "12345678900", requiredMode = Schema.RequiredMode.REQUIRED)
         String cpf,
         
         @Schema(description = "Data de nascimento (yyyy-MM-dd)")
