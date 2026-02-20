@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Data
-@Table(name = "xref_ponto_resumo", uniqueConstraints = @UniqueConstraint(columnNames = {"registro_ponto_id"}))
+@Table(name = "xref_ponto_resumo", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"registro_ponto_id"}),
+        @UniqueConstraint(columnNames = {"funcionario_id", "data_ref"})
+})
 public class XrefPontoResumo {
 
     @Id
@@ -27,8 +30,8 @@ public class XrefPontoResumo {
     @Column(name = "resumo_ponto_dia_id", nullable = false)
     private UUID resumoPontoDiaId;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "data_ref", nullable = false)
+    private LocalDateTime dataRef;
 
     @Override
     public boolean equals(Object o) {

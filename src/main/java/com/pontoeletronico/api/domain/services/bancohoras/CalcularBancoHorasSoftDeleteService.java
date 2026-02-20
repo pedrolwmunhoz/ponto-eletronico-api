@@ -202,7 +202,7 @@ public class CalcularBancoHorasSoftDeleteService {
         xref.setFuncionarioId(funcionarioId);
         xref.setRegistroPontoId(idRegistroPonto);
         xref.setResumoPontoDiaId(idJornadaNova);
-        xref.setCreatedAt(dataRegistro);
+        xref.setDataRef(dataRegistro);
         xrefPontoResumoRepository.save(xref);
     }
 
@@ -218,7 +218,7 @@ public class CalcularBancoHorasSoftDeleteService {
         jornadaNova.setTotalHorasEsperadas(jornadaConfig.cargaDiaria());
         jornadaNova.setInconsistente(inconsistente);
         jornadaNova.setMotivoInconsistencia(inconsistente ? "IMPAR" : null);
-        jornadaNova.setCreatedAt(now);
+        jornadaNova.setDataRef(listaRegistrosJornada.get(0).getCreatedAt()); // dataRef do resumo = data da primeira batida
         recalcularJornadaAfetada(jornadaNova, listaRegistrosJornada, jornadaConfig);
     }
 
@@ -267,7 +267,7 @@ public class CalcularBancoHorasSoftDeleteService {
         xref.setFuncionarioId(funcionarioId);
         xref.setRegistroPontoId(idRegistroPonto);
         xref.setResumoPontoDiaId(idJornada);
-        xref.setCreatedAt(dataRegistro);
+        xref.setDataRef(dataRegistro);
         xrefPontoResumoRepository.save(xref);
     }
 

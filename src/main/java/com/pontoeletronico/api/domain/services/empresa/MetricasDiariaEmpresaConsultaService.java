@@ -40,13 +40,14 @@ public class MetricasDiariaEmpresaConsultaService {
     }
 
     /**
-     * Retorna somente a métrica do dia de hoje (Total do dia / Registros Hoje).
-     * Se não existir métrica para hoje, retorna resposta com data_ref=hoje e totais zerados.
+     * Retorna a métrica mais recente da empresa (maior data_ref), para o dashboard.
+     * Assim o dashboard mostra sempre o último snapshot (evita divergência por timezone do servidor).
+     * Se não houver nenhuma métrica, retorna resposta zerada para hoje.
      */
     public Optional<MetricasDiariaEmpresaResponse> buscarMetricaHojeOuUltima(UUID empresaId, HttpServletRequest httpRequest) {
         LocalDate hoje = LocalDate.now(ZONE);
-        Optional<MetricasDiariaEmpresa> opt = metricasDiariaEmpresaRepository.findByEmpresaIdAndDataRef(empresaId, hoje);
-        Optional<MetricasDiariaEmpresaResponse> result = opt.isPresent() ? opt.map(this::toResponse) : Optional.of(metricasZeradasParaData(empresaId, hoje));
+        Optional<MetricasDiariaEmpresa> optUltima = metricasDiariaEmpresaRepository.findTopByEmpresaIdOrderByDataRefDesc(empresaId);
+        Optional<MetricasDiariaEmpresaResponse> result = optUltima.isPresent() ? optUltima.map(this::toResponse) : Optional.of(metricasZeradasParaData(empresaId, hoje));
         auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_METRICAS_DIA, "Consulta métricas do dia (dashboard)", null, null, true, null, LocalDateTime.now(), httpRequest);
         return result;
     }

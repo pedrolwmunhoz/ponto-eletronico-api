@@ -32,6 +32,7 @@ public class EmpresaController implements EmpresaSwagger {
     private final EmpresaJornadaPadraoService empresaJornadaPadraoService;
     private final EmpresaBancoHorasConfigService empresaBancoHorasConfigService;
     private final MetricasDiariaEmpresaConsultaService metricasDiariaEmpresaConsultaService;
+    private final AtividadeRecenteConsultaService atividadeRecenteConsultaService;
     private final JwtUtil jwtUtil;
     private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
 
@@ -44,6 +45,7 @@ public class EmpresaController implements EmpresaSwagger {
                              EmpresaJornadaPadraoService empresaJornadaPadraoService,
                              EmpresaBancoHorasConfigService empresaBancoHorasConfigService,
                              MetricasDiariaEmpresaConsultaService metricasDiariaEmpresaConsultaService,
+                             AtividadeRecenteConsultaService atividadeRecenteConsultaService,
                              JwtUtil jwtUtil,
                              AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
         this.empresaService = empresaService;
@@ -53,6 +55,7 @@ public class EmpresaController implements EmpresaSwagger {
         this.empresaJornadaPadraoService = empresaJornadaPadraoService;
         this.empresaBancoHorasConfigService = empresaBancoHorasConfigService;
         this.metricasDiariaEmpresaConsultaService = metricasDiariaEmpresaConsultaService;
+        this.atividadeRecenteConsultaService = atividadeRecenteConsultaService;
         this.jwtUtil = jwtUtil;
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
@@ -142,6 +145,16 @@ public class EmpresaController implements EmpresaSwagger {
             HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
         var list = metricasDiariaEmpresaConsultaService.listarPorDataInicioFim(empresaId, dataInicio, dataFim, httpRequest);
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/atividades-recentes")
+    @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
+    public ResponseEntity<List<AtividadeRecenteResponse>> atividadesRecentes(
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest) {
+        var empresaId = jwtUtil.extractUserIdFromToken(authorization);
+        var list = atividadeRecenteConsultaService.listar(empresaId, httpRequest);
         return ResponseEntity.ok(list);
     }
 

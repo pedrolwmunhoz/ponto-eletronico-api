@@ -85,8 +85,7 @@ public class MetricasDiariaEmpresaContadorService {
 
     /** Incrementa total_ponto_hoje ao bater ponto pelo app. */
     @Transactional
-    public void incrementarRegistrosPonto(UUID empresaId) {
-        LocalDate dataRef = LocalDate.now();
+    public void incrementarRegistrosPonto(UUID empresaId, LocalDate dataRef) {
         try {
             adquirirLock(empresaId, dataRef);
             MetricasDiariaEmpresa m = obterOuCriarMetricaParaData(empresaId, dataRef);

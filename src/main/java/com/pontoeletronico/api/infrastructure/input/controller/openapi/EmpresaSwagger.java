@@ -103,4 +103,14 @@ public interface EmpresaSwagger {
             @RequestParam("dataInicio") LocalDate dataInicio,
             @RequestParam("dataFim") LocalDate dataFim,
             HttpServletRequest httpRequest);
+
+    @Operation(summary = "Atividades recentes", description = "Últimos 4 registros de ponto da empresa (nome do funcionário + horário). Mesmo dado do card da landing. Máximo 4 itens.", tags = {"Empresa"})
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de atividades recentes (nomeCompleto, registradoEm)"),
+            @ApiResponse(responseCode = "401", description = "Não autorizado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    ResponseEntity<List<AtividadeRecenteResponse>> atividadesRecentes(
+            @RequestHeader("Authorization") String authorization,
+            HttpServletRequest httpRequest);
 }

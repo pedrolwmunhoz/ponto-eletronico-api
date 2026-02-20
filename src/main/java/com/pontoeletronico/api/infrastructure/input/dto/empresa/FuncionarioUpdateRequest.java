@@ -11,7 +11,7 @@ import java.util.UUID;
 /** Doc id 16: Alterar dados de funcionário - Request. */
 @Schema(description = "Requisição de alteração de funcionário. Todos os campos são opcionais; somente os enviados serão atualizados.")
 public record FuncionarioUpdateRequest(
-        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
+        @Size(min = 6, max = 255, message = "username deve ter entre 6 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único do funcionário", example = "joao.silva")
         String username,

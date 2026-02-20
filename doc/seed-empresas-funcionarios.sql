@@ -211,7 +211,7 @@ BEGIN
           id, funcionario_id, empresa_id,
           primeira_batida, ultima_batida,
           total_horas_trabalhadas, total_horas_esperadas,
-          quantidade_registros, inconsistente, created_at
+          quantidade_registros, inconsistente, data_ref
         )
         VALUES (
           v_resumo_id, v_func_id, v_empresa_id,
@@ -223,25 +223,25 @@ BEGIN
         INSERT INTO registro_ponto (id, idempotency_key, usuario_id, dia_semana, dispositivo_id, tipo_marcacao_id, tipo_entrada, created_at)
         VALUES (gen_random_uuid(), gen_random_uuid(), v_func_id, v_dia_semana, v_dispositivo_id, v_tipo_manual, true, v_entrada1)
         RETURNING id INTO v_reg_id;
-        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, created_at)
+        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, data_ref)
         VALUES (gen_random_uuid(), v_func_id, v_reg_id, v_resumo_id, v_entrada1);
 
         INSERT INTO registro_ponto (id, idempotency_key, usuario_id, dia_semana, dispositivo_id, tipo_marcacao_id, tipo_entrada, created_at)
         VALUES (gen_random_uuid(), gen_random_uuid(), v_func_id, v_dia_semana, v_dispositivo_id, v_tipo_manual, false, v_saida1)
         RETURNING id INTO v_reg_id;
-        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, created_at)
+        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, data_ref)
         VALUES (gen_random_uuid(), v_func_id, v_reg_id, v_resumo_id, v_saida1);
 
         INSERT INTO registro_ponto (id, idempotency_key, usuario_id, dia_semana, dispositivo_id, tipo_marcacao_id, tipo_entrada, created_at)
         VALUES (gen_random_uuid(), gen_random_uuid(), v_func_id, v_dia_semana, v_dispositivo_id, v_tipo_manual, true, v_entrada2)
         RETURNING id INTO v_reg_id;
-        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, created_at)
+        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, data_ref)
         VALUES (gen_random_uuid(), v_func_id, v_reg_id, v_resumo_id, v_entrada2);
 
         INSERT INTO registro_ponto (id, idempotency_key, usuario_id, dia_semana, dispositivo_id, tipo_marcacao_id, tipo_entrada, created_at)
         VALUES (gen_random_uuid(), gen_random_uuid(), v_func_id, v_dia_semana, v_dispositivo_id, v_tipo_manual, false, v_saida2)
         RETURNING id INTO v_reg_id;
-        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, created_at)
+        INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, data_ref)
         VALUES (gen_random_uuid(), v_func_id, v_reg_id, v_resumo_id, v_saida2);
       END IF;
       v_dia := v_dia + 1;
@@ -367,13 +367,13 @@ BEGIN
     GROUP BY empresa_id, d
   ),
   registros_por_dia AS (
-    SELECT res.empresa_id, xpr.created_at::DATE AS d,
+    SELECT res.empresa_id, xpr.data_ref::DATE AS d,
       COUNT(*) AS cnt
     FROM xref_ponto_resumo xpr
     JOIN resumo_ponto_dia res ON res.id = xpr.resumo_ponto_dia_id
-    WHERE xpr.created_at >= v_inicio_mes
-      AND xpr.created_at < v_fim_mes + INTERVAL '1 day'
-    GROUP BY res.empresa_id, xpr.created_at::DATE
+    WHERE xpr.data_ref >= v_inicio_mes
+      AND xpr.data_ref < v_fim_mes + INTERVAL '1 day'
+    GROUP BY res.empresa_id, xpr.data_ref::DATE
   )
   SELECT
     gen_random_uuid(),

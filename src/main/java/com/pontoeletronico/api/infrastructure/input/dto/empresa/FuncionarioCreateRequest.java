@@ -12,7 +12,7 @@ import java.util.UUID;
 @Schema(description = "Requisição de cadastro de funcionário")
 public record FuncionarioCreateRequest(
         @NotBlank(message = "username é obrigatório")
-        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
+        @Size(min = 6, max = 255, message = "username deve ter entre 6 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único do funcionário", example = "joao.silva", requiredMode = Schema.RequiredMode.REQUIRED)
         String username,

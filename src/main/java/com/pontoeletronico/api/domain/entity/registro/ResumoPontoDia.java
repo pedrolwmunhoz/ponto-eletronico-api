@@ -50,8 +50,8 @@ public class ResumoPontoDia {
     @Column(name = "motivo_inconsistencia", length = 50)
     private String motivoInconsistencia;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "data_ref", nullable = false)
+    private LocalDateTime dataRef;
 
 
 

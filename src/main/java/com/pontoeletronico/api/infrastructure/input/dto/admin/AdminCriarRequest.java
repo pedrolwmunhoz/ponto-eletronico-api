@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
 public record AdminCriarRequest(
 
         @NotBlank(message = "username é obrigatório")
-        @Size(max = 255)
+        @Size(min = 6, max = 255, message = "username deve ter entre 6 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username não pode conter letras maiúsculas, espaços ou caracteres especiais exceto . e -")
         @Schema(description = "Username único", example = "admin", requiredMode = Schema.RequiredMode.REQUIRED)
         String username,

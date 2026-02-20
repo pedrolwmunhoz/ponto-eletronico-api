@@ -4,10 +4,8 @@ import com.pontoeletronico.api.domain.services.auth.DispositivoService;
 import com.pontoeletronico.api.domain.services.bancohoras.CalcularBancoHorasAplicativoService;
 import com.pontoeletronico.api.domain.services.bancohoras.CalcularBancoHorasSoftDeleteService;
 import com.pontoeletronico.api.domain.services.bancohoras.CalcularHorasMetricasService;
-import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.domain.services.empresa.MetricasDiariaEmpresaContadorService;
 import com.pontoeletronico.api.domain.enums.MensagemErro;
-import com.pontoeletronico.api.domain.services.util.ObterJornadaConfigUtils;
 import com.pontoeletronico.api.exception.BadRequestException;
 import com.pontoeletronico.api.exception.FuncionarioNaoEncontradoException;
 import com.pontoeletronico.api.exception.RegistroNaoEncontradoException;
@@ -36,7 +34,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Data
@@ -65,10 +62,10 @@ public class FuncionarioRegistroPontoService {
     private final XrefPontoResumoRepository xrefPontoResumoRepository;
     private final MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService;
     private final CalcularHorasMetricasService calcularHorasMetricasService;
+    private final CalcularBancoHorasAplicativoService calcularBancoHorasAplicativoService;
    
     private static final int IDX_JORNADA = 0;
     private static final int IDX_DATA = 1;
-    private static final int IDX_DIA_SEMANA = 2;
     private static final int IDX_STATUS = 3;
     private static final int IDX_TOTAL_HORAS_RAW = 4;
     private static final int IDX_MARCADOES_JSON = 5;
@@ -215,8 +212,6 @@ public class FuncionarioRegistroPontoService {
             return;
         }
 
-        var jornadaConfig = registroPontoValidacaoService.validar(empresaId, funcionarioId, request.registroMetadados());
-
         lockRegistroPontoService.adquirirLock(funcionarioId);
         
         var dispositivoId = dispositivoService.obterOuCriar(empresaId, httpRequest);
@@ -225,7 +220,7 @@ public class FuncionarioRegistroPontoService {
         var diaSemana = DIA_SEMANA.get(dataNovoRegistro.getDayOfWeek());
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_SISTEMA, null, dataNovoRegistro);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
-        calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, registroPonto, jornadaConfig);
+        calcularBancoHorasAplicativoService.processarRegistroAplicativo(funcionarioId, empresaId, registroPonto.getId(), dataNovoRegistro);
     }
 
     /** Doc id 31: Registro de ponto pelo aplicativo. Data/hora = instante da requisição (backend). */
@@ -249,13 +244,12 @@ public class FuncionarioRegistroPontoService {
         if (identificacao == null) {
             throw new FuncionarioNaoEncontradoException();
         }
-        var jornadaConfig = registroPontoValidacaoService.validar(identificacao.getEmpresaId(), funcionarioId, request.registroMetadados());
         var dispositivoId = dispositivoService.obterOuCriar(funcionarioId, httpRequest);
         var diaSemana = DIA_SEMANA.get(dataNovoRegistro.getDayOfWeek());
         var idNovoRegistro = UUID.randomUUID();
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_SISTEMA, null, dataNovoRegistro);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
-        calcularHorasMetricasService.calcularHorasAposEntradaManual(identificacao.getEmpresaId(), registroPonto, jornadaConfig);
+        calcularBancoHorasAplicativoService.processarRegistroAplicativo(funcionarioId, identificacao.getEmpresaId(), registroPonto.getId(), dataNovoRegistro);
     }
 
     /** Doc id 32: Deletar registro de ponto (funcionário). */
@@ -273,12 +267,11 @@ public class FuncionarioRegistroPontoService {
         
         if (Boolean.TRUE.equals(jornadaConfig.permiteAjustePonto())) {
             lockRegistroPontoService.adquirirLock(funcionarioId);
+            
+            registroPontoRepository.findByIdAndUsuarioId(idRegistro, funcionarioId)
+            .orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
             calcularBancoHorasSoftDeleteService.processarSoftDelete(funcionarioId, identificacao.getEmpresaId(), idRegistro, registroPonto.getCreatedAt(), jornadaConfig);
-
-            var rows = registroPontoRepository.deleteByIdAndUsuarioId(idRegistro, funcionarioId);
-            if (rows == 0) {
-                throw new RegistroNaoEncontradoException("Registro de ponto não encontrado");
-            }
+            registroPontoRepository.deleteById(idRegistro);
         } else {
             var tipoJustificativaId = tipoJustificativaRepository.findIdByDescricao(MOTIVO_OUTROS);
             if (tipoJustificativaId == null) {

@@ -65,7 +65,7 @@ public class BancoHorasMensalService {
         mensal.setTotalHorasTrabalhadasFeriado(Duration.ZERO);
 
         List<ResumoPontoDia> jornadas = resumoPontoDiaRepository
-                .findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscCreatedAtAsc(funcionarioId, inicio, fim);
+                .findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscDataRefAsc(funcionarioId, inicio, fim);
 
         Duration somaEsperadas = Duration.ZERO;
         Duration somaTrabalhadas = Duration.ZERO;

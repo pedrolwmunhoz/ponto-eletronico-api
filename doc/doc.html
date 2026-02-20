@@ -729,7 +729,7 @@
                         <p>Criar nova tabela xrefPontoResumo que guarda o vinculo entre registroPonto e resumo da jornada<br>
 A Jornada é a tabela resumo_ponto_dia</p>
                         <pre class="bg-stone-100 p-4 rounded-lg overflow-x-auto text-xs font-mono">@Entity
-@Table(name = "resumo_ponto_dia", uniqueConstraints = @UniqueConstraint(columnNames = {"funcionario_id", "creatAt"}))
+@Table(name = "resumo_ponto_dia")
 public class ResumoPontoDia {
     @Id @Column(name = "id") private UUID id;
     @Column(name = "funcionario_id", nullable = false) private UUID funcionarioId;
@@ -781,9 +781,9 @@ Query -  buscarResumoPontoDia(Jornada) por id - tabela resumo_ponto_dia<br>
 Atribui a variavel JornadaAfetada</p>
                                 <p>Se existe jornadaAfetada. - buscar listaRegistro da jornadaAfetada e atribuir a variavel List registrosJornadaAfetada - buscar lista de registrosPonto da JornadaAfetada - pelo range de datas da primeiraBatida e UltimaBatida do pontoResumo(JornadaAfetada)</p>
                                 <p>Se tem uma jornadaAfetada Obrigatoriamente existe uma jornada anterior<br>
-NovaQuery  - buscar jornadaAnterior pelo id JornadaAfetada(ResumoPontoDia.id) - usar createdAt para achar a exata anterior com ativo:true como filtro - Tabela resumoPontoDia(Jornada)</p>
+NovaQuery  - buscar jornadaAnterior pelo id JornadaAfetada(ResumoPontoDia.id) - usar dataRef para achar a exata anterior com ativo:true como filtro - Tabela resumoPontoDia(Jornada)</p>
                                 <p>verificar se existe jornada posterior:<br>
-NovaQuery - buscar jornada posterior a partir JornadaAfetada(ResumoPontoDia.id) na tabela xref - - usar createdAt para achar a exata posterior com ativo:true como filtro - Tabela resumoPontoDia(Jornada)</p>
+NovaQuery - buscar jornada posterior a partir JornadaAfetada(ResumoPontoDia.id) na tabela xref - - usar dataRef para achar a exata posterior com ativo:true como filtro - Tabela resumoPontoDia(Jornada)</p>
                                 <p>Incluir registro manual<br>
 Logica de Recalculo:<br>
 Incluir novo registro manual<br>
@@ -1254,7 +1254,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "quantidadeRegistros": "Integer (NOT NULL, Default: 0). Número de registros de ponto da jornada.",
   "inconsistente": "Boolean (NOT NULL, Default: false)",
   "motivoInconsistencia": "String (Nullable, length 50)",
-  "createdAt": "TIMESTAMP (NOT NULL)",
+  "dataRef": "TIMESTAMP (NOT NULL). Data de referência da jornada.",
   "INDEX(funcionario_id, primeira_batida)"
 }
 
@@ -1273,9 +1273,12 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
 // Vínculo entre registro_ponto e resumo_ponto_dia (jornada). Um registro de ponto pertence a uma única jornada.
 {
   "id": "UUID (PK)",
+  "funcionarioId": "UUID (FK → users.id, NOT NULL)",
   "registroPontoId": "UUID (FK → registro_ponto.id, NOT NULL, UNIQUE)",
   "resumoPontoDiaId": "UUID (FK → resumo_ponto_dia.id, NOT NULL)",
-  "UNIQUE(registro_ponto_id)"
+  "dataRef": "TIMESTAMP (NOT NULL), data de referência do registro na jornada",
+  "UNIQUE(registro_ponto_id)",
+  "UNIQUE(funcionario_id, data_ref)"
 }
 
 // ─── TABELA: tipo_solicitacao_ponto ───
@@ -1899,6 +1902,16 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 params: 'dataInicio (query, LocalDate yyyy-MM-dd, obrigatório), dataFim (query, LocalDate yyyy-MM-dd, obrigatório)',
                 statusCode: '200 (OK). 400 Bad Request, 401 Unauthorized',
                 response: 'Array de MetricasDiariaEmpresaResponse ordenado por data_ref ASC.'
+            },
+            {
+                id: 13.1,
+                method: 'GET',
+                url: '/api/empresa/atividades-recentes',
+                description: 'Atividades recentes (últimos 4 registros de ponto da empresa)',
+                auth: true,
+                observacao: 'usuarioId da empresa extraído do token JWT. Mesmo dado do card da landing: nome do funcionário + horário do registro. Máximo 4 itens.',
+                statusCode: '200 (OK). 401 Unauthorized',
+                response: 'Array de AtividadeRecenteResponse: { nomeCompleto: string, registradoEm: LocalDateTime ISO }.'
             },
             ],
             // #endregion

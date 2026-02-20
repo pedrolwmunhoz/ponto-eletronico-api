@@ -12,10 +12,12 @@ public record JornadaFuncionarioConfigRequest(
         Integer tipoEscalaJornadaId,
         
         @NotNull(message = "cargaHorariaDiaria é obrigatória")
+        @DurationMaxHours(value = 12, message = "cargaHorariaDiaria deve ser no máximo 12 horas")
         @Schema(description = "Carga horária diária (ISO-8601 Duration, ex: PT8H)", example = "PT8H", requiredMode = Schema.RequiredMode.REQUIRED)
         Duration cargaHorariaDiaria,
         
         @NotNull(message = "cargaHorariaSemanal é obrigatória")
+        @DurationMaxHours(value = 44, message = "cargaHorariaSemanal deve ser no máximo 44 horas")
         @Schema(description = "Carga horária semanal (ISO-8601 Duration, ex: PT44H)", example = "PT44H", requiredMode = Schema.RequiredMode.REQUIRED)
         Duration cargaHorariaSemanal,
         
@@ -27,10 +29,12 @@ public record JornadaFuncionarioConfigRequest(
         @Schema(description = "Horário de saída padrão (HH:mm)", example = "17:00", requiredMode = Schema.RequiredMode.REQUIRED)
         LocalTime saidaPadrao,
         
+        @DurationMaxHours(value = 6, message = "toleranciaPadrao deve ser no máximo 6 horas")
         @Schema(description = "Tolerância padrão (ISO-8601 Duration, ex: PT0S)", example = "PT0S")
         Duration toleranciaPadrao,
         
         @NotNull(message = "intervaloPadrao é obrigatório")
+        @DurationMaxHours(value = 6, message = "intervaloPadrao deve ser no máximo 6 horas")
         @Schema(description = "Intervalo padrão (ISO-8601 Duration, ex: PT1H)", example = "PT1H", requiredMode = Schema.RequiredMode.REQUIRED)
         Duration intervaloPadrao,
 

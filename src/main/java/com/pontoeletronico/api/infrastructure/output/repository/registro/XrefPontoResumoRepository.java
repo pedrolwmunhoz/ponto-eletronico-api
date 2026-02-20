@@ -18,20 +18,20 @@ public interface XrefPontoResumoRepository extends JpaRepository<XrefPontoResumo
 
     @Modifying
     @Query(value = """
-            INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, created_at)
-            VALUES (:id, :funcionarioId, :registroPontoId, :resumoPontoDiaId, :createdAt)
+            INSERT INTO xref_ponto_resumo (id, funcionario_id, registro_ponto_id, resumo_ponto_dia_id, data_ref)
+            VALUES (:id, :funcionarioId, :registroPontoId, :resumoPontoDiaId, :dataRef)
             """, nativeQuery = true)
-    void insert(@Param("id") UUID id, @Param("funcionarioId") UUID funcionarioId, @Param("registroPontoId") UUID registroPontoId, @Param("resumoPontoDiaId") UUID resumoPontoDiaId, @Param("createdAt") LocalDateTime createdAt);
+    void insert(@Param("id") UUID id, @Param("funcionarioId") UUID funcionarioId, @Param("registroPontoId") UUID registroPontoId, @Param("resumoPontoDiaId") UUID resumoPontoDiaId, @Param("dataRef") LocalDateTime dataRef);
 
 
-    List<XrefPontoResumo> findByResumoPontoDiaIdOrderByCreatedAtAsc(UUID resumoPontoDiaId);
+    List<XrefPontoResumo> findByResumoPontoDiaIdOrderByDataRefAsc(UUID resumoPontoDiaId);
 
     @Query(value = """
             SELECT res.* FROM resumo_ponto_dia res
             INNER JOIN xref_ponto_resumo xref ON res.id = xref.resumo_ponto_dia_id
             INNER JOIN registro_ponto rp ON rp.id = xref.registro_ponto_id
             WHERE rp.usuario_id = :funcionarioId
-              AND xref.created_at BETWEEN :dataInicio AND :dataFim
+              AND xref.data_ref BETWEEN :dataInicio AND :dataFim
             ORDER BY res.primeira_batida ASC LIMIT 1
             """, nativeQuery = true)
     Optional<ResumoPontoDia> findByFuncionarioIdAndDataBetweenAsc(@Param("funcionarioId") UUID funcionarioId, @Param("dataInicio") LocalDateTime dataInicio, @Param("dataFim") LocalDateTime dataFim);
@@ -41,16 +41,19 @@ public interface XrefPontoResumoRepository extends JpaRepository<XrefPontoResumo
             INNER JOIN xref_ponto_resumo xref ON res.id = xref.resumo_ponto_dia_id
             INNER JOIN registro_ponto rp ON rp.id = xref.registro_ponto_id
             WHERE rp.usuario_id = :funcionarioId
-              AND xref.created_at BETWEEN :dataInicio AND :dataFim
+              AND xref.data_ref BETWEEN :dataInicio AND :dataFim
             ORDER BY res.primeira_batida DESC LIMIT 1
             """, nativeQuery = true)
     Optional<ResumoPontoDia> findByFuncionarioIdAndDataBetweenDesc(@Param("funcionarioId") UUID funcionarioId, @Param("dataInicio") LocalDateTime dataInicio, @Param("dataFim") LocalDateTime dataFim);
 
 
+   @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE x.funcionario_id = :funcionarioId AND x.data_ref = :dataRef", nativeQuery = true)
+   Optional<ResumoPontoDia> findbyFuncionarioIdAndDataRef(@Param("funcionarioId") UUID funcionarioId, @Param("dataRef") LocalDateTime dataRef);
+    
     @Query(value = "SELECT EXISTS(SELECT 1 FROM xref_ponto_resumo WHERE registro_ponto_id = :registroPontoId)", nativeQuery = true)
     boolean existsByRegistroPontoId(@Param("registroPontoId") UUID registroPontoId);
 
-    @Query(value = "SELECT r.* FROM registro_ponto r JOIN xref_ponto_resumo x ON r.id = x.registro_ponto_id WHERE x.resumo_ponto_dia_id = :resumoPontoDiaId ORDER BY r.created_at ASC", nativeQuery = true)
+    @Query(value = "SELECT r.* FROM registro_ponto r JOIN xref_ponto_resumo x ON r.id = x.registro_ponto_id WHERE x.resumo_ponto_dia_id = :resumoPontoDiaId ORDER BY x.data_ref ASC", nativeQuery = true)
     List<RegistroPonto> listRegistroPontoByResumoPontoDiaIdOrderByCreatedAt(@Param("resumoPontoDiaId") UUID resumoPontoDiaId);
 
     @Query(value = "SELECT r.* FROM resumo_ponto_dia r INNER JOIN xref_ponto_resumo x ON r.id = x.resumo_ponto_dia_id WHERE x.registro_ponto_id = :registroPontoId", nativeQuery = true)

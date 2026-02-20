@@ -37,8 +37,8 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
 
     @Modifying
     @Query(
-        value = "INSERT INTO resumo_ponto_dia (id, funcionario_id, empresa_id, primeira_batida, ultima_batida, total_horas_trabalhadas, total_horas_esperadas, quantidade_registros, inconsistente, motivo_inconsistencia, created_at) " +
-                "VALUES (:id, :funcionarioId, :empresaId, :primeiraBatida, :ultimaBatida, :totalHorasTrabalhadas, :totalHorasEsperadas, :quantidadeRegistros, :inconsistente, :motivoInconsistencia, :createdAt)",
+        value = "INSERT INTO resumo_ponto_dia (id, funcionario_id, empresa_id, primeira_batida, ultima_batida, total_horas_trabalhadas, total_horas_esperadas, quantidade_registros, inconsistente, motivo_inconsistencia, data_ref) " +
+                "VALUES (:id, :funcionarioId, :empresaId, :primeiraBatida, :ultimaBatida, :totalHorasTrabalhadas, :totalHorasEsperadas, :quantidadeRegistros, :inconsistente, :motivoInconsistencia, :dataRef)",
         nativeQuery = true
     )
     void insert(
@@ -52,10 +52,10 @@ public interface ResumoPontoDiaRepository extends JpaRepository<ResumoPontoDia, 
         @Param("inconsistente") Boolean inconsistente,
         @Param("motivoInconsistencia") String motivoInconsistencia,
         @Param("quantidadeRegistros") Long quantidadeRegistros,
-        @Param("createdAt") LocalDateTime createdAt
+        @Param("dataRef") LocalDateTime dataRef
     );
-    @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) BETWEEN :inicio AND :fim ORDER BY r.primeira_batida ASC, r.created_at ASC", nativeQuery = true)
-    List<ResumoPontoDia> findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscCreatedAtAsc(
+    @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND CAST(r.primeira_batida AS date) BETWEEN :inicio AND :fim ORDER BY r.primeira_batida ASC, r.data_ref ASC", nativeQuery = true)
+    List<ResumoPontoDia> findByFuncionarioIdAndDataBetweenOrderByPrimeiraBatidaAscDataRefAsc(
             @Param("funcionarioId") UUID funcionarioId, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
 
 }

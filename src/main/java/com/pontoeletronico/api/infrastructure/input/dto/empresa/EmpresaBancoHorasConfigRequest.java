@@ -1,6 +1,7 @@
 package com.pontoeletronico.api.infrastructure.input.dto.empresa;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
@@ -12,6 +13,7 @@ public record EmpresaBancoHorasConfigRequest(
 
         @NotNull(message = "totalDiasVencimento é obrigatório")
         @Positive(message = "totalDiasVencimento deve ser positivo")
+        @Max(value = 365, message = "totalDiasVencimento deve ser no máximo 365")
         @Schema(description = "Total de dias para vencimento do banco de horas", example = "365", requiredMode = Schema.RequiredMode.REQUIRED)
         Integer totalDiasVencimento
 ) {}

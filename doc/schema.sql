@@ -574,7 +574,7 @@ CREATE TABLE IF NOT EXISTS resumo_ponto_dia (
     quantidade_registros            INTEGER NOT NULL DEFAULT 0,
     inconsistente           BOOLEAN NOT NULL DEFAULT false,
     motivo_inconsistencia   VARCHAR(50) NULL,
-    created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    data_ref                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_resumo_ponto_dia_empresa_primeira ON resumo_ponto_dia(empresa_id, primeira_batida);
@@ -596,8 +596,8 @@ CREATE TABLE IF NOT EXISTS xref_ponto_resumo (
     funcionario_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     registro_ponto_id   UUID NOT NULL UNIQUE REFERENCES registro_ponto(id) ON DELETE CASCADE,
     resumo_ponto_dia_id UUID NOT NULL REFERENCES resumo_ponto_dia(id) ON DELETE CASCADE,
-    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(funcionario_id, created_at)
+    data_ref            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(funcionario_id, data_ref)
 );
 
 CREATE INDEX IF NOT EXISTS idx_xref_ponto_resumo_resumo_id ON xref_ponto_resumo(resumo_ponto_dia_id);

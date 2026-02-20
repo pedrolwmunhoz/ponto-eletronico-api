@@ -13,7 +13,7 @@ import com.pontoeletronico.api.infrastructure.input.dto.empresa.CnpjValido;
 public record EmpresaCreateRequest(
         
         @NotBlank(message = "username é obrigatório")
-        @Size(min = 2, max = 255, message = "username deve ter entre 2 e 255 caracteres")
+        @Size(min = 6, max = 255, message = "username deve ter entre 6 e 255 caracteres")
         @Pattern(regexp = "^[a-z0-9.-]+$", message = "username: apenas letras minúsculas, números, . e -")
         @Schema(description = "Username único da empresa", example = "empresa-acme", requiredMode = Schema.RequiredMode.REQUIRED)
         String username,
