@@ -30,4 +30,5 @@ public interface EmpresaPerfilProjection {
     Boolean getAssinaturaDigitalObrigatoria();
     Boolean getGravarGeolocalizacaoObrigatoria();
     Boolean getPermitirAjustePontoDireto();
+    java.time.LocalDateTime getDataExpiracaoCertificado();
 }

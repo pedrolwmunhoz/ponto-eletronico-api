@@ -1,9 +1,6 @@
 package com.pontoeletronico.api.infrastructure.input.controller.openapi;
 
 import com.pontoeletronico.api.infrastructure.input.dto.registro.*;
-import com.pontoeletronico.api.infrastructure.input.dto.registro.PontoListagemResponse;
-import com.pontoeletronico.api.infrastructure.input.dto.registro.RegistroPontoManualRequest;
-import com.pontoeletronico.api.infrastructure.input.dto.registro.RegistroPontoPublicoRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -67,4 +64,13 @@ public interface FuncionarioRegistroPontoSwagger {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     ResponseEntity<Void> deletarRegistro(@PathVariable("idRegistro") UUID idRegistro, @RequestHeader("Authorization") String authorization, @RequestBody RegistroMetadadosRequest request);
+
+    @Operation(summary = "Assinar comprovante de jornada", description = "Assina o payload do comprovante PDF (ex.: hash do PDF) com o certificado A1 da empresa do funcionário. Não persiste nada; retorna assinatura, serial e timestamp para o front embutir no PDF. usuarioId (funcionário) extraído do token JWT.", tags = {"Registro-ponto (funcionário)"})
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "OK — corpo com assinaturaDigital, certificadoSerial, timestampAssinatura (nulos se empresa sem certificado)"),
+            @ApiResponse(responseCode = "401", description = "Não autorizado"),
+            @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    ResponseEntity<AssinarComprovanteJornadaResponse> assinarComprovanteJornada(@Valid @RequestBody AssinarComprovanteJornadaRequest request, @RequestHeader("Authorization") String authorization);
 }

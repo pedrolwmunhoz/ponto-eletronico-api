@@ -13,6 +13,7 @@ import com.pontoeletronico.api.exception.TipoNaoEncontradoException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.pontoeletronico.api.infrastructure.input.dto.common.Paginacao;
 import com.pontoeletronico.api.infrastructure.input.dto.registro.*;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaJornadaConfigRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.empresa.IdentificacaoFuncionarioRepository;
@@ -23,8 +24,11 @@ import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoP
 import com.pontoeletronico.api.infrastructure.output.repository.registro.SolicitacaoPontoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.TipoJustificativaRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.XrefPontoResumoRepository;
+import com.pontoeletronico.api.util.CertificadoA1Utils;
+import com.pontoeletronico.api.util.CertificadoSenhaCriptografiaService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +41,7 @@ import java.util.*;
 
 @Service
 @Data
+@RequiredArgsConstructor
 public class FuncionarioRegistroPontoService {
 
     private static final int TIPO_MARCACAO_MANUAL = 1;
@@ -49,6 +54,7 @@ public class FuncionarioRegistroPontoService {
             DayOfWeek.THURSDAY, "QUI", DayOfWeek.FRIDAY, "SEX", DayOfWeek.SATURDAY, "SAB", DayOfWeek.SUNDAY, "DOM");
 
     private final RegistroPontoRepository registroPontoRepository;
+    private final MetadadosEAssinaturaRegistroPontoService metadadosEAssinaturaRegistroPontoService;
     private final IdentificacaoFuncionarioRepository identificacaoFuncionarioRepository;
     private final EmpresaJornadaConfigRepository empresaJornadaConfigRepository;
     private final SolicitacaoPontoRepository solicitacaoPontoRepository;
@@ -77,6 +83,26 @@ public class FuncionarioRegistroPontoService {
         var fim = inicio.plusMonths(1).minusDays(1);
         var rows = resumoPontoDiaRepository.findPontoListagemRowsRaw(funcionarioId, inicio, fim);
         return mapPontoListagemRowsToResponse(rows);
+    }
+
+    /** Lista batidas do dia (hoje) do funcionário com paginação. Params: page, size. */
+    public BatidasHojePageResponse listarBatidasHoje(UUID funcionarioId, int page, int size, HttpServletRequest httpRequest) {
+        var hoje = LocalDate.now();
+        var inicio = hoje.atStartOfDay();
+        var fim = hoje.plusDays(1).atStartOfDay();
+        int limit = Math.max(1, Math.min(size, 100));
+        int offset = Math.max(0, page) * limit;
+        long total = registroPontoRepository.countByUsuarioIdAndCreatedAtBetween(funcionarioId, inicio, fim);
+        var list = registroPontoRepository.findByUsuarioIdAndCreatedAtBetweenOrderByCreatedAtDescLimitOffset(funcionarioId, inicio, fim, limit, offset);
+        var conteudo = list.stream()
+                .map(r -> new BatidaHojeItemResponse(
+                        r.getId(),
+                        r.getCreatedAt(),
+                        Boolean.TRUE.equals(r.getTipoEntrada()) ? "ENTRADA" : "SAIDA"))
+                .toList();
+        int totalPaginas = (int) Math.max(1, (total + limit - 1) / limit);
+        var paginacao = new Paginacao(totalPaginas, total, conteudo.size(), Math.max(0, page));
+        return new BatidasHojePageResponse(paginacao, conteudo);
     }
 
     private static List<PontoListagemResponse> mapPontoListagemRowsToResponse(List<Object[]> rows) {
@@ -180,6 +206,7 @@ public class FuncionarioRegistroPontoService {
             novoRegistro.setDescricao(descricao);
             novoRegistro.setCreatedAt(dataRegistroManual);
             registroPontoRepository.save(novoRegistro);
+            metadadosEAssinaturaRegistroPontoService.gravar(empresaId, novoRegistro, request.registroMetadados());
             calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, novoRegistro, jornadaConfig);
         } else {
             var tipoJustificativaId = tipoJustificativaRepository.findIdByDescricao(request.justificativa());
@@ -190,6 +217,7 @@ public class FuncionarioRegistroPontoService {
             solicitacaoPontoRepository.insert(UUID.randomUUID(), idempotencyKey, funcionarioId, SolicitacaoPonto.TIPO_CRIAR, dataRegistroManual, null, tipoJustificativaId, now);
         }
     }
+    
     /** Doc id 30: Registro de ponto público (tablet da empresa). */
     @Transactional(timeout = 60)
     public void registrarPontoAppPublicoFuncionario(UUID empresaId, RegistroPontoPublicoRequest request, UUID idempotencyKey, HttpServletRequest httpRequest) {
@@ -206,7 +234,7 @@ public class FuncionarioRegistroPontoService {
         
         Optional<RegistroPonto> registroPontoOptional = registroPontoRepository.findByUsuarioIdAndCreatedAt(funcionarioId, dataNovoRegistro);
         if (registroPontoOptional.isPresent()) {
-            throw new BadRequestException("Registro de ponto já existe");
+            return;
         }
         if (registroPontoRepository.findByIdempotencyKeyAndUsuarioId(idempotencyKey, funcionarioId).isPresent()) {
             return;
@@ -220,6 +248,7 @@ public class FuncionarioRegistroPontoService {
         var diaSemana = DIA_SEMANA.get(dataNovoRegistro.getDayOfWeek());
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_SISTEMA, null, dataNovoRegistro);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
+        metadadosEAssinaturaRegistroPontoService.gravar(empresaId, registroPonto, request.registroMetadados());
         calcularBancoHorasAplicativoService.processarRegistroAplicativo(funcionarioId, empresaId, registroPonto.getId(), dataNovoRegistro);
     }
 
@@ -249,6 +278,7 @@ public class FuncionarioRegistroPontoService {
         var idNovoRegistro = UUID.randomUUID();
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_SISTEMA, null, dataNovoRegistro);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
+        metadadosEAssinaturaRegistroPontoService.gravar(identificacao.getEmpresaId(), registroPonto, request.registroMetadados());
         calcularBancoHorasAplicativoService.processarRegistroAplicativo(funcionarioId, identificacao.getEmpresaId(), registroPonto.getId(), dataNovoRegistro);
     }
 

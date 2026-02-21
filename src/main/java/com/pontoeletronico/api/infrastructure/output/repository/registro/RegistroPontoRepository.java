@@ -24,6 +24,12 @@ public interface RegistroPontoRepository extends JpaRepository<RegistroPonto, UU
     @Query(value = "SELECT r.* FROM registro_ponto r WHERE r.usuario_id = :usuarioId AND r.created_at >= :inicio AND r.created_at < :fim ORDER BY r.created_at ASC", nativeQuery = true)
     List<RegistroPonto> findByUsuarioIdAndCreatedAtBetweenOrderByCreatedAtAsc(@Param("usuarioId") UUID usuarioId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
+    @Query(value = "SELECT COUNT(*) FROM registro_ponto r WHERE r.usuario_id = :usuarioId AND r.created_at >= :inicio AND r.created_at < :fim", nativeQuery = true)
+    long countByUsuarioIdAndCreatedAtBetween(@Param("usuarioId") UUID usuarioId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
+
+    @Query(value = "SELECT r.* FROM registro_ponto r WHERE r.usuario_id = :usuarioId AND r.created_at >= :inicio AND r.created_at < :fim ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<RegistroPonto> findByUsuarioIdAndCreatedAtBetweenOrderByCreatedAtDescLimitOffset(@Param("usuarioId") UUID usuarioId, @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim, @Param("limit") int limit, @Param("offset") int offset);
+
     @Query(value = "SELECT * FROM registro_ponto WHERE id = :id AND usuario_id = :usuarioId LIMIT 1", nativeQuery = true)
     Optional<RegistroPonto> findByIdAndUsuarioId(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
 

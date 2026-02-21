@@ -1,6 +1,7 @@
 package com.pontoeletronico.api.infrastructure.input.dto.perfil;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 /** Doc id 27: Recuperar informações da empresa - Response. */
 public record EmpresaPerfilResponse(
@@ -30,6 +31,7 @@ public record EmpresaPerfilResponse(
         Boolean auditoriaAtiva,
         Boolean assinaturaDigitalObrigatoria,
         Boolean gravarGeolocalizacaoObrigatoria,
-        Boolean permitirAjustePontoDireto
+        Boolean permitirAjustePontoDireto,
+        LocalDateTime dataExpiracaoCertificado
 ) {
 }

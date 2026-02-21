@@ -1,6 +1,7 @@
 package com.pontoeletronico.api.infrastructure.input.controller;
 
 import com.pontoeletronico.api.domain.services.audit.AuditoriaRegistroAsyncService;
+import com.pontoeletronico.api.domain.services.registro.ComprovanteJornadaAssinaturaService;
 import com.pontoeletronico.api.domain.services.registro.FuncionarioRegistroPontoService;
 import com.pontoeletronico.api.infrastructure.input.controller.openapi.FuncionarioRegistroPontoSwagger;
 import com.pontoeletronico.api.infrastructure.input.dto.registro.*;
@@ -26,11 +27,16 @@ public class FuncionarioRegistroPontoController implements FuncionarioRegistroPo
     private static final String ACAO_LISTAGEM_PONTO_PROPRIO = "ACESSO_LISTAGEM_PONTO_PROPRIO";
 
     private final FuncionarioRegistroPontoService registroPontoService;
+    private final ComprovanteJornadaAssinaturaService comprovanteJornadaAssinaturaService;
     private final JwtUtil jwtUtil;
     private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
 
-    public FuncionarioRegistroPontoController(FuncionarioRegistroPontoService registroPontoService, JwtUtil jwtUtil, AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
+    public FuncionarioRegistroPontoController(FuncionarioRegistroPontoService registroPontoService,
+                                              ComprovanteJornadaAssinaturaService comprovanteJornadaAssinaturaService,
+                                              JwtUtil jwtUtil,
+                                              AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
         this.registroPontoService = registroPontoService;
+        this.comprovanteJornadaAssinaturaService = comprovanteJornadaAssinaturaService;
         this.jwtUtil = jwtUtil;
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
@@ -92,5 +98,15 @@ public class FuncionarioRegistroPontoController implements FuncionarioRegistroPo
         var funcionarioId = jwtUtil.extractUserIdFromToken(authorization);
         registroPontoService.deletarRegistroFuncionario(funcionarioId, idRegistro, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/funcionario/comprovante-jornada/assinar")
+    @PreAuthorize("hasAuthority('SCOPE_FUNCIONARIO')")
+    public ResponseEntity<AssinarComprovanteJornadaResponse> assinarComprovanteJornada(
+            @Valid @RequestBody AssinarComprovanteJornadaRequest request,
+            @RequestHeader("Authorization") String authorization) {
+        var funcionarioId = jwtUtil.extractUserIdFromToken(authorization);
+        var response = comprovanteJornadaAssinaturaService.assinar(funcionarioId, request.payloadBase64());
+        return ResponseEntity.ok(response);
     }
 }

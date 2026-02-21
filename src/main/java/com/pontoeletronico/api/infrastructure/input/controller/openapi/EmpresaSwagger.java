@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -53,6 +54,15 @@ public interface EmpresaSwagger {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     ResponseEntity<Void> configInicial(@Valid @RequestBody EmpresaConfigInicialRequest request, @RequestHeader("Authorization") String authorization, HttpServletRequest httpRequest);
+
+    @Operation(summary = "Enviar certificado A1 (após config inicial)", description = "Multipart: certificadoA1 (arquivo .pfx/.p12), certificadoA1Senha (opcional). Chamar depois de POST /config-inicial.", tags = {"Empresa"})
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Certificado gravado"),
+            @ApiResponse(responseCode = "400", description = "Certificado inválido ou CNPJ não confere"),
+            @ApiResponse(responseCode = "401", description = "Não autorizado"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    ResponseEntity<Void> configInicialCertificado(@RequestPart("certificadoA1") org.springframework.web.multipart.MultipartFile certificadoA1, @RequestPart(value = "certificadoA1Senha", required = false) String certificadoA1Senha, @RequestHeader("Authorization") String authorization);
 
     @Operation(summary = "Resetar senha da empresa", description = "Empresa altera a própria senha (senha antiga + nova). Desativa senha antiga e insere nova. Senha é por usuário, não por credencial. Nunca excluir.", tags = {"Empresa"})
     @ApiResponses(value = {

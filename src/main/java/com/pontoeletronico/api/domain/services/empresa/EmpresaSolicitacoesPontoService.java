@@ -5,6 +5,7 @@ import com.pontoeletronico.api.domain.services.auth.DispositivoService;
 import com.pontoeletronico.api.domain.services.bancohoras.CalcularBancoHorasSoftDeleteService;
 import com.pontoeletronico.api.domain.services.bancohoras.CalcularHorasMetricasService;
 import com.pontoeletronico.api.domain.services.registro.LockRegistroPontoService;
+import com.pontoeletronico.api.domain.services.registro.MetadadosEAssinaturaRegistroPontoService;
 import com.pontoeletronico.api.domain.services.registro.FuncionarioRegistroPontoService;
 import com.pontoeletronico.api.domain.services.util.ObterJornadaConfigUtils;
 import com.pontoeletronico.api.exception.BadRequestException;
@@ -56,6 +57,7 @@ public class EmpresaSolicitacoesPontoService {
     private final CalcularHorasMetricasService calcularHorasMetricasService;
     private final ObterJornadaConfigUtils obterJornadaConfigUtils;
     private final AuditoriaRegistroAsyncService auditoriaRegistroAsyncService;
+    private final MetadadosEAssinaturaRegistroPontoService metadadosEAssinaturaRegistroPontoService;
 
     public EmpresaSolicitacoesPontoService(IdentificacaoFuncionarioRepository identificacaoFuncionarioRepository,
                                            FuncionarioRegistroPontoService registroPontoService,
@@ -68,7 +70,8 @@ public class EmpresaSolicitacoesPontoService {
                                            MetricasDiariaEmpresaContadorService metricasDiariaEmpresaContadorService,
                                            CalcularHorasMetricasService calcularHorasMetricasService,
                                            ObterJornadaConfigUtils obterJornadaConfigUtils,
-                                           AuditoriaRegistroAsyncService auditoriaRegistroAsyncService) {
+                                           AuditoriaRegistroAsyncService auditoriaRegistroAsyncService,
+                                           MetadadosEAssinaturaRegistroPontoService metadadosEAssinaturaRegistroPontoService) {
         this.identificacaoFuncionarioRepository = identificacaoFuncionarioRepository;
         this.registroPontoService = registroPontoService;
         this.registroPontoRepository = registroPontoRepository;
@@ -81,6 +84,7 @@ public class EmpresaSolicitacoesPontoService {
         this.calcularHorasMetricasService = calcularHorasMetricasService;
         this.obterJornadaConfigUtils = obterJornadaConfigUtils;
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
+        this.metadadosEAssinaturaRegistroPontoService = metadadosEAssinaturaRegistroPontoService;
     }
 
     /** Doc id 33: Listar informações de ponto de um funcionário (ano/mês). */
@@ -156,7 +160,7 @@ public class EmpresaSolicitacoesPontoService {
         var diaSemana = DIA_SEMANA.get(horario.getDayOfWeek());
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_MANUAL, descricao, horario);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
-
+        metadadosEAssinaturaRegistroPontoService.gravar(empresaId, registroPonto, (Double) null, (Double) null);
         calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, registroPonto, obterJornadaConfigUtils.obterJornadaConfig(empresaId, funcionarioId));
         auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_EDITAR_REGISTRO_MANUAL, "Edição de registro de ponto manual", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
@@ -194,6 +198,7 @@ public class EmpresaSolicitacoesPontoService {
 
         registroPontoRepository.insert(idNovoRegistro, idempotencyKey, funcionarioId, diaSemana, dispositivoId, TIPO_MARCACAO_MANUAL, descricao, horario);
         RegistroPonto registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
+        metadadosEAssinaturaRegistroPontoService.gravar(empresaId, registroPonto, (Double) null, (Double) null);
         calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, registroPonto, obterJornadaConfigUtils.obterJornadaConfig(empresaId, funcionarioId));
         auditoriaRegistroAsyncService.registrarSemDispositivoID(empresaId, ACAO_CRIAR_REGISTRO_MANUAL, "Criação de registro de ponto manual", null, null, true, null, LocalDateTime.now(), httpRequest);
     }
@@ -248,6 +253,7 @@ public class EmpresaSolicitacoesPontoService {
             var diaSemana = DIA_SEMANA.get(horario.getDayOfWeek());
             registroPontoRepository.insert(idNovoRegistro, idempotencyKey, solicitacaoPonto.getUsuarioId(), diaSemana, dispositivoId, TIPO_MARCACAO_MANUAL, "Registro aprovado pela empresa", horario);
             registroPonto = registroPontoRepository.findById(idNovoRegistro).orElseThrow(() -> new RegistroNaoEncontradoException("Registro de ponto não encontrado"));
+            metadadosEAssinaturaRegistroPontoService.gravar(empresaId, registroPonto, (Double) null, (Double) null);
             calcularHorasMetricasService.calcularHorasAposEntradaManual(empresaId, registroPonto, obterJornadaConfigUtils.obterJornadaConfig(empresaId, solicitacaoPonto.getUsuarioId()));
         } else {
             RegistroPonto registroPontoDeletado = registroPontoRepository.findById(solicitacaoPonto.getRegistroPontoId())

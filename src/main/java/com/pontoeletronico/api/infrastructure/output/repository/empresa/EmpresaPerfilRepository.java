@@ -37,6 +37,7 @@ public interface EmpresaPerfilRepository extends Repository<Users, UUID> {
                 ec.tempo_retencao_anos              AS "tempoRetencao",
                 ec.auditoria_ativa                  AS "auditoriaAtiva",
                 ec.assinatura_digital_obrigatoria   AS "assinaturaDigitalObrigatoria",
+                ec.data_expiracao_certificado       AS "dataExpiracaoCertificado",
                 ejc.grava_geo_obrigatoria           AS "gravarGeolocalizacaoObrigatoria",
                 ejc.permite_ajuste_ponto            AS "permitirAjustePontoDireto"
             FROM users u

@@ -24,6 +24,7 @@ public interface XrefPontoResumoRepository extends JpaRepository<XrefPontoResumo
     void insert(@Param("id") UUID id, @Param("funcionarioId") UUID funcionarioId, @Param("registroPontoId") UUID registroPontoId, @Param("resumoPontoDiaId") UUID resumoPontoDiaId, @Param("dataRef") LocalDateTime dataRef);
 
 
+    @Query(value = "SELECT x.* FROM xref_ponto_resumo x WHERE x.resumo_ponto_dia_id = :resumoPontoDiaId ORDER BY x.data_ref ASC", nativeQuery = true)
     List<XrefPontoResumo> findByResumoPontoDiaIdOrderByDataRefAsc(UUID resumoPontoDiaId);
 
     @Query(value = """
@@ -47,8 +48,8 @@ public interface XrefPontoResumoRepository extends JpaRepository<XrefPontoResumo
     Optional<ResumoPontoDia> findByFuncionarioIdAndDataBetweenDesc(@Param("funcionarioId") UUID funcionarioId, @Param("dataInicio") LocalDateTime dataInicio, @Param("dataFim") LocalDateTime dataFim);
 
 
-   @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE x.funcionario_id = :funcionarioId AND x.data_ref = :dataRef", nativeQuery = true)
-   Optional<ResumoPontoDia> findbyFuncionarioIdAndDataRef(@Param("funcionarioId") UUID funcionarioId, @Param("dataRef") LocalDateTime dataRef);
+   @Query(value = "SELECT r.* FROM resumo_ponto_dia r WHERE r.funcionario_id = :funcionarioId AND r.ultima_batida BETWEEN :dataInicio AND :dataFim ORDER BY r.ultima_batida DESC LIMIT 1", nativeQuery = true)
+   Optional<ResumoPontoDia> findbyFuncionarioIdAndUltimaBatidaBetween(@Param("funcionarioId") UUID funcionarioId, @Param("dataInicio") LocalDateTime dataInicio, @Param("dataFim") LocalDateTime dataFim);
     
     @Query(value = "SELECT EXISTS(SELECT 1 FROM xref_ponto_resumo WHERE registro_ponto_id = :registroPontoId)", nativeQuery = true)
     boolean existsByRegistroPontoId(@Param("registroPontoId") UUID registroPontoId);

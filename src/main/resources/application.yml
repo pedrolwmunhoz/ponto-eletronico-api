@@ -45,3 +45,6 @@ app:
   brute-force:
     max-tentativas: 5
     janela-minutos: 15
+  certificado:
+    # Chave AES-256 (32 bytes) em Base64. Em produção defina APP_CERTIFICADO_ENCRYPTION_KEY.
+    encryption-key: ${APP_CERTIFICADO_ENCRYPTION_KEY:yQ7KTQKcFsKZYVfJtG5dfA9PMBDgjzU+vbKNgJVy1wM=}

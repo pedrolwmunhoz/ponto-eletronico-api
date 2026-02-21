@@ -1,14 +1,13 @@
 package com.pontoeletronico.api.domain.services.bancohoras;
 
 import com.pontoeletronico.api.domain.entity.registro.EstadoJornadaFuncionario;
+import com.pontoeletronico.api.domain.entity.registro.RegistroPonto;
 import com.pontoeletronico.api.domain.entity.registro.ResumoPontoDia;
 import com.pontoeletronico.api.domain.entity.registro.XrefPontoResumo;
 import com.pontoeletronico.api.domain.services.bancohoras.record.JornadaConfig;
 import com.pontoeletronico.api.domain.services.bancohoras.utils.CalcularResumoDiaUtils;
 import com.pontoeletronico.api.domain.services.empresa.MetricasDiariaEmpresaContadorService;
 import com.pontoeletronico.api.domain.services.util.ObterJornadaConfigUtils;
-import com.pontoeletronico.api.infrastructure.output.repository.empresa.EmpresaJornadaConfigRepository;
-import com.pontoeletronico.api.infrastructure.output.repository.empresa.JornadaFuncionarioConfigRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.EstadoJornadaFuncionarioRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.RegistroPontoRepository;
 import com.pontoeletronico.api.infrastructure.output.repository.registro.ResumoPontoDiaRepository;
@@ -56,28 +55,18 @@ public class CalcularBancoHorasAplicativoService {
         ResumoPontoDia jornadaAtual = null;
         Duration diff = null;
 
-        Optional<ResumoPontoDia> resumoDiaOpt = xrefPontoResumoRepository.findbyFuncionarioIdAndDataRef(funcionarioId, dataRegistro);
-        Optional<ResumoPontoDia> resumoDiaAnteriorOpt = xrefPontoResumoRepository.findbyFuncionarioIdAndDataRef(funcionarioId, dataRegistro.minus(1, ChronoUnit.DAYS));
+        LocalDateTime rangeRegistroNegativo = dataRegistro.minus(tempoDescanso).plus(1, ChronoUnit.MILLIS);
 
+        Optional<ResumoPontoDia> resumoDiaOpt = xrefPontoResumoRepository.findbyFuncionarioIdAndUltimaBatidaBetween(funcionarioId, rangeRegistroNegativo, dataRegistro);
+ 
         if (resumoDiaOpt.isPresent()) {
             jornadaAtual = resumoDiaOpt.get();
             diff = Duration.between(jornadaAtual.getUltimaBatida(), dataRegistro);
             if (!diff.isNegative() && diff.compareTo(tempoDescanso) <= 0) mesmaJornada = true;
-            
-        }else if (resumoDiaAnteriorOpt.isPresent()) {
-            jornadaAtual = resumoDiaAnteriorOpt.get();
-            diff = Duration.between(jornadaAtual.getUltimaBatida(), dataRegistro);
-            if (!diff.isNegative() && diff.compareTo(tempoDescanso) <= 0) mesmaJornada = true;
-            
-        }
-
-        var tipoNovoEntrada = false;
-        if (jornadaAtual != null && jornadaAtual.getQuantidadeRegistros() > 0) {
-            tipoNovoEntrada = jornadaAtual.getQuantidadeRegistros() % 2 != 0 ? true : false;
         }
 
         if (mesmaJornada) {
-            vincularAResumoERecalcular(funcionarioId, empresaId, idRegistro, dataRegistro, tipoNovoEntrada, jornadaAtual, estadoOpt.get(), diff, jornadaConfig);
+            vincularAResumoERecalcular(funcionarioId, empresaId, idRegistro, dataRegistro, jornadaAtual, estadoOpt.get(), diff, jornadaConfig);
         } else {
             criarNovaJornadaEAtualizarEstado(funcionarioId, empresaId, idRegistro, dataRegistro, estadoOpt.orElse(null), jornadaConfig);
         }
@@ -85,7 +74,7 @@ public class CalcularBancoHorasAplicativoService {
 
     /** Registro por app na mesma jornada: só incrementar (uma nova xref), não recriar lista. */
     private void vincularAResumoERecalcular(UUID funcionarioId, UUID empresaId, UUID idRegistro, LocalDateTime dataRegistro,
-                                            boolean tipoNovoEntrada, ResumoPontoDia resumo, EstadoJornadaFuncionario estado, Duration diff, JornadaConfig jornadaConfig) {
+                                            ResumoPontoDia resumo, EstadoJornadaFuncionario estado, Duration diff, JornadaConfig jornadaConfig) {
         if (!xrefPontoResumoRepository.existsByRegistroPontoId(idRegistro)) {
             var xref = new XrefPontoResumo();
             xref.setId(UUID.randomUUID());
@@ -96,12 +85,21 @@ public class CalcularBancoHorasAplicativoService {
             xrefPontoResumoRepository.save(xref);
         }
 
+        
+        
         var listaXref = xrefPontoResumoRepository.findByResumoPontoDiaIdOrderByDataRefAsc(resumo.getId());
+        var listtaRegistros = registroPontoRepository.findByIdInOrderByCreatedAtAsc(listaXref.stream().map(XrefPontoResumo::getRegistroPontoId).collect(Collectors.toSet()));
+        reordenarTipos(listtaRegistros);
+        
         var idsRegistros = listaXref.stream().map(XrefPontoResumo::getRegistroPontoId).collect(Collectors.toSet());
         var registros = registroPontoRepository.findByIdInOrderByCreatedAtAsc(idsRegistros);
-
+        
         calcularResumoDiaUtils.recalcularResumoDoDia(resumo, registros, jornadaConfig);
         resumoPontoDiaRepository.save(resumo);
+        var tipoNovoEntrada = true;
+        if (resumo != null && resumo.getQuantidadeRegistros() > 0) {
+            tipoNovoEntrada = resumo.getQuantidadeRegistros() % 2 == 0 ? false : true;
+        }
 
         if (!tipoNovoEntrada) {
             bancoHorasMensalService.acumularNoMensal(funcionarioId, empresaId, resumo.getPrimeiraBatida().getYear(), resumo.getPrimeiraBatida().getMonthValue(), null, diff);
@@ -109,10 +107,18 @@ public class CalcularBancoHorasAplicativoService {
         }else{
             metricasDiariaEmpresaContadorService.incrementarRegistrosPonto(empresaId, resumo.getPrimeiraBatida().toLocalDate());
         }
+        String tipoUltimaBatida = null;
+        if (tipoNovoEntrada) {
+            tipoUltimaBatida = EstadoJornadaFuncionario.TIPO_ENTRADA;
+        }else{
+            tipoUltimaBatida = EstadoJornadaFuncionario.TIPO_SAIDA;
+        }
         estado.setUltimaBatida(dataRegistro);
         estado.setUltimaJornadaId(resumo.getId());
-        estado.setTipoUltimaBatida(tipoNovoEntrada ? EstadoJornadaFuncionario.TIPO_ENTRADA : EstadoJornadaFuncionario.TIPO_SAIDA);
+        estado.setTipoUltimaBatida(tipoUltimaBatida);
         estado.setUpdatedAt(LocalDateTime.now());
+
+        
         estadoJornadaFuncionarioRepository.save(estado);
     }
 
@@ -164,4 +170,17 @@ public class CalcularBancoHorasAplicativoService {
         metricasDiariaEmpresaContadorService.incrementarRegistrosPonto(empresaId, dataRegistro.toLocalDate());
     }
 
+    private void reordenarTipos(List<RegistroPonto> listaRegistros) {
+        // Reordena tipoEntrada: primeira batida = entrada (true), segunda = saída (false), alternando
+        boolean entrada = true;
+        for (RegistroPonto registro : listaRegistros) {
+            
+            if (registro.getTipoEntrada() != entrada) {
+                registro.setTipoEntrada(entrada);
+                registroPontoRepository.save(registro);
+            }
+            entrada = !entrada;
+            
+        }
+    }
 }

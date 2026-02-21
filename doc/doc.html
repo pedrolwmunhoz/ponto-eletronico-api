@@ -1164,6 +1164,10 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
   "tempoRetencaoAnos": "Integer (NOT NULL, Min: 5)",
   "auditoriaAtiva": "Boolean (NOT NULL, Default: true)",
   "assinaturaDigitalObrigatoria": "Boolean (NOT NULL, Default: true)",
+  "certificado": "Blob (BYTEA, Nullable). Certificado digital A1 (.pfx/.p12) da empresa.",
+  "certificadoHash": "VARCHAR(64), SHA-256 (hex) do certificado X.509 para auditoria e fingerprint.",
+  "certificadoSenhaCriptografada": "TEXT (Nullable). Senha do .pfx criptografada (AES-256-GCM) para o backend assinar depois.",
+  "dataExpiracaoCertificado": "TIMESTAMP (Nullable). LocalDateTime, data de expiração (extraída do cert).",
   "updatedAt": "TIMESTAMP (NOT NULL), ex: DD-MM-YYYY HH:mm:ss"
 }
 
@@ -2395,12 +2399,29 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 response: 'Sem corpo. 204 No Content.',
                 notes: 'Remoção de registro de ponto é feita por DELETE físico. Se a empresa não permite ajuste direto, cria solicitação de remoção (idempotency_key evita duplicidade).'
             },
+            {
+                id: 35,
+                method: 'POST',
+                url: '/api/funcionario/comprovante-jornada/assinar',
+                description: 'Assinar comprovante PDF da jornada (sem persistência)',
+                auth: true,
+                observacao: 'usuarioId (funcionário) extraído do token JWT. Retorna assinatura digital, serial do certificado e timestamp para o front embutir no PDF.',
+                params: 'Nenhum no path. Body: payloadBase64 (obrigatório).',
+                statusCode: '200 (OK). 401 Unauthorized, 404 Funcionário não encontrado, 500 Erro interno.',
+                response: {
+                    assinaturaDigital: 'String (Nullable, Base64)',
+                    certificadoSerial: 'String (Nullable)',
+                    timestampAssinatura: 'LocalDateTime (Nullable), ex: yyyy-MM-ddTHH:mm:ss'
+                },
+                body: { payloadBase64: 'String (NOT NULL), ex.: Base64 do hash (SHA-256) do PDF' },
+                notes: 'Só assina o payload com o certificado A1 da empresa do funcionário. Não grava nada. Campos da resposta nulos se empresa sem certificado.'
+            },
             ],
             // #endregion
             // #region Empresa (solicitações de ponto)
             empresaSolicitacoes: [
             {
-                id: 35,
+                id: 36,
                 method: 'GET',
                 url: '/api/empresa/funcionario/:funcionarioId/ponto',
                 description: 'Listar informações de ponto de um funcionário (ano/mês)',
@@ -2424,7 +2445,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 notes: 'Empresa só tem acesso aos funcionários dela mesma.'
             },
             {
-                id: 36,
+                id: 37,
                 method: 'DELETE',
                 url: '/api/empresa/funcionario/:funcionarioId/registro-ponto/:registroId',
                 description: 'Deletar registro de ponto de um funcionário',
@@ -2436,7 +2457,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 notes: 'Empresa só tem acesso aos funcionários dela mesma. Registro de ponto é excluído fisicamente (DELETE).'
             },
             {
-                id: 37,
+                id: 38,
                 method: 'POST',
                 url: '/api/empresa/funcionario/:funcionarioId/registro-ponto',
                 description: 'Criar registro de ponto para um funcionário (manual)',
@@ -2453,7 +2474,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 38,
+                id: 39,
                 method: 'GET',
                 url: '/api/empresa/solicitacoes-ponto',
                 description: 'Listar todas as solicitações de ponto dos funcionários (criar/excluir registro manual). Filtro opcional por nome do funcionário.',
@@ -2478,7 +2499,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 39,
+                id: 40,
                 method: 'POST',
                 url: '/api/empresa/solicitacoes-ponto/:idRegistroPendente/aprovar',
                 description: 'Aprovar solicitação de ponto pendente',
@@ -2489,7 +2510,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 response: 'Sem corpo. Mensagem de sucesso ou erro.'
             },
             {
-                id: 40,
+                id: 41,
                 method: 'POST',
                 url: '/api/empresa/solicitacoes-ponto/:idRegistroPendente/reprovar',
                 description: 'Reprovar solicitação de ponto pendente',
@@ -2531,7 +2552,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             // #region Férias e afastamentos
             feriasAfastamentos: [
             {
-                id: 41,
+                id: 42,
                 method: 'GET',
                 url: '/api/funcionario/ferias-afastamentos',
                 description: 'Listar férias e afastamentos do funcionário',
@@ -2554,7 +2575,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 42,
+                id: 43,
                 method: 'GET',
                 url: '/api/empresa/funcionario/:funcionarioId/ferias-afastamentos',
                 description: 'Listar férias e afastamentos de um funcionário por id',
@@ -2578,7 +2599,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 43,
+                id: 44,
                 method: 'GET',
                 url: '/api/empresa/ferias-afastamentos',
                 description: 'Listar férias e afastamentos da empresa. Filtro opcional por nome do funcionário.',
@@ -2602,7 +2623,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 44,
+                id: 45,
                 method: 'POST',
                 url: '/api/empresa/funcionario/:funcionarioId/afastamentos',
                 description: 'Criar afastamento para um funcionário',
@@ -2625,7 +2646,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
             // #region Funcionario (banco-horas)
             funcionarioBancoHoras: [
             {
-                id: 45,
+                id: 46,
                 method: 'GET',
                 url: '/api/empresa/funcionario/:funcionarioId/resumo-banco-horas',
                 description: 'Resumo banco de horas',
@@ -2655,7 +2676,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 }
             },
             {
-                id: 47,
+                id: 48,
                 method: 'POST',
                 url: '/api/empresa/funcionario/:funcionarioId/banco-horas/fechamento',
                 description: 'Fechamento do mês - grava na tabela banco_horas_historico',
@@ -2691,7 +2712,7 @@ Estado: se estadoExistente null criar novo (funcionarioId, empresaId). ultimaBat
                 ]
             },
             {
-                id: 49,
+                id: 50,
                 method: 'POST',
                 url: '/api/empresa/geofences',
                 description: 'Criar novo geofence para a empresa',

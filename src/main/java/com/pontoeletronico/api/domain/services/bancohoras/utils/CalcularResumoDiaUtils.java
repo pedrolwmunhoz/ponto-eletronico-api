@@ -11,7 +11,6 @@ import com.pontoeletronico.api.infrastructure.output.repository.empresa.TipoAfas
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +28,7 @@ public class CalcularResumoDiaUtils {
     private final FeriadoRepository feriadoRepository;
 
     public void recalcularResumoDoDia(ResumoPontoDia resumo, List<RegistroPonto> registros, JornadaConfig config) {
+ 
         if (registros.isEmpty()) return;
         registros.sort(Comparator.comparing(RegistroPonto::getCreatedAt));
         resumo.setPrimeiraBatida(registros.get(0).getCreatedAt());

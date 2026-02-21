@@ -398,6 +398,10 @@ CREATE TABLE IF NOT EXISTS empresa_compliance (
     tempo_retencao_anos         INTEGER NOT NULL CHECK (tempo_retencao_anos >= 5),
     auditoria_ativa             BOOLEAN NOT NULL DEFAULT true,
     assinatura_digital_obrigatoria BOOLEAN NOT NULL DEFAULT true,
+    certificado                 BYTEA NULL,
+    certificado_hash            VARCHAR(64) NULL,
+    certificado_senha_criptografada TEXT NULL,
+    data_expiracao_certificado  TIMESTAMP NULL,
     updated_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -604,15 +608,15 @@ CREATE INDEX IF NOT EXISTS idx_xref_ponto_resumo_resumo_id ON xref_ponto_resumo(
 CREATE INDEX IF NOT EXISTS idx_xref_ponto_resumo_registro_id ON xref_ponto_resumo(registro_ponto_id);
 CREATE INDEX IF NOT EXISTS idx_xref_ponto_resumo_funcionario_id ON xref_ponto_resumo(funcionario_id);
 
--- 45. registro_metadados
+-- 45. registro_metadados (geo sempre opcional; assinatura_digital/certificado_serial preenchidos quando empresa tem cert A1)
 CREATE TABLE IF NOT EXISTS registro_metadados (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registro_id         UUID NOT NULL UNIQUE REFERENCES registro_ponto(id) ON DELETE CASCADE,
     geo_latitude        DOUBLE PRECISION NULL,
     geo_longitude       DOUBLE PRECISION NULL,
-    assinatura_digital  TEXT NOT NULL,
-    certificado_serial  VARCHAR(255) NOT NULL,
-    timestamp_assinatura TIMESTAMP NOT NULL,
+    assinatura_digital  TEXT NULL,
+    certificado_serial  VARCHAR(255) NULL,
+    timestamp_assinatura TIMESTAMP NULL,
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

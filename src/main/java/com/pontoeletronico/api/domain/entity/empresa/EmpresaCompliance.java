@@ -5,6 +5,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,6 +36,20 @@ public class EmpresaCompliance {
 
     @Column(name = "assinatura_digital_obrigatoria", nullable = false)
     private Boolean assinaturaDigitalObrigatoria = true;
+
+    @Basic(fetch = FetchType.EAGER)
+    @JdbcTypeCode(SqlTypes.BINARY)
+    @Column(name = "certificado")
+    private byte[] certificado;
+
+    @Column(name = "certificado_hash", length = 64)
+    private String certificadoHash;
+
+    @Column(name = "certificado_senha_criptografada", columnDefinition = "TEXT")
+    private String certificadoSenhaCriptografada;
+
+    @Column(name = "data_expiracao_certificado")
+    private LocalDateTime dataExpiracaoCertificado;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

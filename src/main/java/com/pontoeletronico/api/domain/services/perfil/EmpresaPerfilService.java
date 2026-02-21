@@ -71,7 +71,8 @@ public class EmpresaPerfilService {
                 p.getAuditoriaAtiva(),
                 p.getAssinaturaDigitalObrigatoria(),
                 p.getGravarGeolocalizacaoObrigatoria(),
-                p.getPermitirAjustePontoDireto()
+                p.getPermitirAjustePontoDireto(),
+                p.getDataExpiracaoCertificado()
         );
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -89,10 +90,21 @@ public class EmpresaController implements EmpresaSwagger {
     @PostMapping("/config-inicial")
     @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
     public ResponseEntity<Void> configInicial(@Valid @RequestBody EmpresaConfigInicialRequest request,
-                                              @RequestHeader("Authorization") String authorization,
-                                              HttpServletRequest httpRequest) {
+                                             @RequestHeader("Authorization") String authorization,
+                                             HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
         empresaConfigInicialService.configurar(empresaId, request, httpRequest);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/config-inicial/certificado", consumes = "multipart/form-data")
+    @PreAuthorize("hasAuthority('SCOPE_EMPRESA')")
+    public ResponseEntity<Void> configInicialCertificado(
+            @RequestPart("certificadoA1") MultipartFile certificadoA1,
+            @RequestPart(value = "certificadoA1Senha", required = false) String certificadoA1Senha,
+            @RequestHeader("Authorization") String authorization) {
+        var empresaId = jwtUtil.extractUserIdFromToken(authorization);
+        empresaConfigInicialService.adicionarCertificado(empresaId, certificadoA1, certificadoA1Senha);
         return ResponseEntity.ok().build();
     }
 
