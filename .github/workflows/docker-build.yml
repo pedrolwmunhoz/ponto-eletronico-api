@@ -7,8 +7,10 @@ on:
 
 jobs:
   build-and-push:
-    name: Build & Push Docker
+    name: "1 - Build & Push Docker"
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,8 +36,9 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy ArgoCD
+    name: "2 - Deploy ArgoCD"
     needs: build-and-push
+    if: always() && needs.build-and-push.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Install ArgoCD CLI
