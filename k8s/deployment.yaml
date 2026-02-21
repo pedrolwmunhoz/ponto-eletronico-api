@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ponto-eletronico-api
+  labels:
+    app: ponto-eletronico-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ponto-eletronico-api
+  template:
+    metadata:
+      labels:
+        app: ponto-eletronico-api
+    spec:
+      containers:
+        - name: api
+          image: clockintech/ponto-eletronico-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: PORT
+              value: "8081"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ponto-eletronico-api-secret
+                  key: spring.datasource.url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ponto-eletronico-api-secret
+                  key: spring.datasource.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ponto-eletronico-api-secret
+                  key: spring.datasource.password
+            - name: APP_CERTIFICADO_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ponto-eletronico-api-secret
+                  key: app.certificado.encryption-key
+                  optional: true
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10

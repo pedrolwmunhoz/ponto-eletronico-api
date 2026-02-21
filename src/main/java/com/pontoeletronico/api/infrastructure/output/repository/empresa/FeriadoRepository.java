@@ -16,27 +16,71 @@ import java.util.UUID;
 @Repository
 public interface FeriadoRepository extends JpaRepository<Feriado, UUID> {
 
-    /** Feriados que se aplicam à empresa: criados pela empresa OU criados por Admin (join users). Filtro opcional por descricao (observacao). */
+    /** Feriados que se aplicam à empresa: tipo NACIONAL (todos) ou criados pela empresa (usuario_id = empresaId). Filtro opcional por data. */
     @Query(value = """
             SELECT f.id AS "id", f.data AS "data", f.descricao AS "descricao", f.tipo_feriado_id AS "tipoFeriadoId",
                    tf.descricao AS "tipoFeriadoDescricao", f.ativo AS "ativo", f.created_at AS "createdAt"
             FROM feriado f
             INNER JOIN tipo_feriado tf ON tf.id = f.tipo_feriado_id
-            INNER JOIN users u ON f.usuario_id = u.id
-            WHERE f.ativo = true AND (f.usuario_id = :empresaId OR u.tipo_usuario_id = (SELECT id FROM tipo_usuario WHERE descricao = 'ADMIN' AND ativo = true LIMIT 1))
-              AND unaccent(LOWER(f.descricao)) LIKE unaccent(LOWER(:observacaoPattern))
+            WHERE f.ativo = true AND (tf.descricao = 'NACIONAL' OR f.usuario_id = :empresaId)
+              AND (CAST(:dataInicio AS DATE) IS NULL OR f.data >= CAST(:dataInicio AS DATE))
+              AND (CAST(:dataFim AS DATE) IS NULL OR f.data <= CAST(:dataFim AS DATE))
             ORDER BY f.data ASC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
-    List<FeriadoListagemProjection> findPageForEmpresa(@Param("empresaId") UUID empresaId, @Param("observacaoPattern") String observacaoPattern, @Param("limit") int limit, @Param("offset") int offset);
+    List<FeriadoListagemProjection> findPageForEmpresa(
+            @Param("empresaId") UUID empresaId,
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
 
     @Query(value = """
             SELECT COUNT(*) FROM feriado f
-            INNER JOIN users u ON f.usuario_id = u.id
-            WHERE f.ativo = true AND (f.usuario_id = :empresaId OR u.tipo_usuario_id = (SELECT id FROM tipo_usuario WHERE descricao = 'ADMIN' AND ativo = true LIMIT 1))
-              AND unaccent(LOWER(f.descricao)) LIKE unaccent(LOWER(:observacaoPattern))
+            INNER JOIN tipo_feriado tf ON tf.id = f.tipo_feriado_id
+            WHERE f.ativo = true AND (tf.descricao = 'NACIONAL' OR f.usuario_id = :empresaId)
+              AND (CAST(:dataInicio AS DATE) IS NULL OR f.data >= CAST(:dataInicio AS DATE))
+              AND (CAST(:dataFim AS DATE) IS NULL OR f.data <= CAST(:dataFim AS DATE))
             """, nativeQuery = true)
-    long countForEmpresa(@Param("empresaId") UUID empresaId, @Param("observacaoPattern") String observacaoPattern);
+    long countForEmpresa(
+            @Param("empresaId") UUID empresaId,
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim);
+
+    /** Com filtro por descricao (observacao) e opcional por data. */
+    @Query(value = """
+            SELECT f.id AS "id", f.data AS "data", f.descricao AS "descricao", f.tipo_feriado_id AS "tipoFeriadoId",
+                   tf.descricao AS "tipoFeriadoDescricao", f.ativo AS "ativo", f.created_at AS "createdAt"
+            FROM feriado f
+            INNER JOIN tipo_feriado tf ON tf.id = f.tipo_feriado_id
+            WHERE f.ativo = true AND (tf.descricao = 'NACIONAL' OR f.usuario_id = :empresaId)
+              AND unaccent(LOWER(f.descricao)) LIKE unaccent(LOWER(:observacaoPattern))
+              AND (CAST(:dataInicio AS DATE) IS NULL OR f.data >= CAST(:dataInicio AS DATE))
+              AND (CAST(:dataFim AS DATE) IS NULL OR f.data <= CAST(:dataFim AS DATE))
+            ORDER BY f.data ASC
+            LIMIT :limit OFFSET :offset
+            """, nativeQuery = true)
+    List<FeriadoListagemProjection> findPageForEmpresaComObservacao(
+            @Param("empresaId") UUID empresaId,
+            @Param("observacaoPattern") String observacaoPattern,
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM feriado f
+            INNER JOIN tipo_feriado tf ON tf.id = f.tipo_feriado_id
+            WHERE f.ativo = true AND (tf.descricao = 'NACIONAL' OR f.usuario_id = :empresaId)
+              AND unaccent(LOWER(f.descricao)) LIKE unaccent(LOWER(:observacaoPattern))
+              AND (CAST(:dataInicio AS DATE) IS NULL OR f.data >= CAST(:dataInicio AS DATE))
+              AND (CAST(:dataFim AS DATE) IS NULL OR f.data <= CAST(:dataFim AS DATE))
+            """, nativeQuery = true)
+    long countForEmpresaComObservacao(
+            @Param("empresaId") UUID empresaId,
+            @Param("observacaoPattern") String observacaoPattern,
+            @Param("dataInicio") LocalDate dataInicio,
+            @Param("dataFim") LocalDate dataFim);
 
     @Query(value = "SELECT * FROM feriado WHERE id = :id AND usuario_id = :usuarioId AND ativo = true LIMIT 1", nativeQuery = true)
     Optional<Feriado> findByIdAndUsuarioIdAndAtivoTrue(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
@@ -97,13 +141,13 @@ public interface FeriadoRepository extends JpaRepository<Feriado, UUID> {
     @Query(value = "SELECT COUNT(*) FROM feriado WHERE usuario_id = :usuarioId AND ativo = true", nativeQuery = true)
     long countByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
-    /** CalcularResumoDiaUtils: feriados que se aplicam à empresa no período. */
+    /** CalcularResumoDiaUtils: feriados que se aplicam à empresa no período (tipo NACIONAL ou criados pela empresa). */
     @Query(value = """
             SELECT f.* FROM feriado f
-            INNER JOIN users u ON f.usuario_id = u.id
+            INNER JOIN tipo_feriado tf ON tf.id = f.tipo_feriado_id
             WHERE f.data BETWEEN CAST(:dataInicio AS DATE) AND CAST(:dataFim AS DATE)
               AND f.ativo = true
-              AND (f.usuario_id = :empresaId OR u.tipo_usuario_id = (SELECT id FROM tipo_usuario WHERE descricao = 'ADMIN' AND ativo = true LIMIT 1))
+              AND (tf.descricao = 'NACIONAL' OR f.usuario_id = :empresaId)
             """, nativeQuery = true)
     List<Feriado> findByDataBetweenAndAtivoTrueForEmpresa(
             @Param("dataInicio") LocalDateTime dataInicio, @Param("dataFim") LocalDateTime dataFim,

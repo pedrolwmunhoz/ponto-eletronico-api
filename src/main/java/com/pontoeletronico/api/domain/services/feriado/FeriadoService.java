@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -35,13 +36,19 @@ public class FeriadoService {
         this.auditoriaRegistroAsyncService = auditoriaRegistroAsyncService;
     }
 
-    /** Doc id 52: Listar feriados da empresa (paginado). Inclui feriados da empresa + feriados criados por Admin. Filtro opcional por observacao (descricao). */
-    public FeriadoListagemPageResponse listarPorEmpresa(UUID empresaId, int page, int size, String observacao, HttpServletRequest httpRequest) {
-        var observacaoPattern = (observacao != null && !observacao.isBlank()) ? "%" + observacao.trim() + "%" : "%";
+    /** Doc id 52: Listar feriados da empresa (paginado). Filtros opcionais: observacao (descricao), dataInicio, dataFim. */
+    public FeriadoListagemPageResponse listarPorEmpresa(UUID empresaId, int page, int size, String observacao,
+            LocalDate dataInicio, LocalDate dataFim, HttpServletRequest httpRequest) {
+        boolean comFiltro = observacao != null && !observacao.isBlank();
+        var observacaoPattern = comFiltro ? "%" + observacao.trim() + "%" : null;
         int limit = Math.max(1, Math.min(size, 100));
         int offset = Math.max(0, page) * limit;
-        var list = feriadoRepository.findPageForEmpresa(empresaId, observacaoPattern, limit, offset);
-        long total = feriadoRepository.countForEmpresa(empresaId, observacaoPattern);
+        var list = comFiltro
+                ? feriadoRepository.findPageForEmpresaComObservacao(empresaId, observacaoPattern, dataInicio, dataFim, limit, offset)
+                : feriadoRepository.findPageForEmpresa(empresaId, dataInicio, dataFim, limit, offset);
+        long total = comFiltro
+                ? feriadoRepository.countForEmpresaComObservacao(empresaId, observacaoPattern, dataInicio, dataFim)
+                : feriadoRepository.countForEmpresa(empresaId, dataInicio, dataFim);
         var conteudo = list.stream().map(this::toItemResponse).toList();
         int totalPaginas = (int) Math.max(1, (total + limit - 1) / limit);
         var paginacao = new Paginacao(totalPaginas, total, conteudo.size(), Math.max(0, page));

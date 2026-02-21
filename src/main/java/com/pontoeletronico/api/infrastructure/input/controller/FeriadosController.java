@@ -12,8 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Validated
@@ -36,9 +38,11 @@ public class FeriadosController implements FeriadosSwagger {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String observacao,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
             HttpServletRequest httpRequest) {
         var empresaId = jwtUtil.extractUserIdFromToken(authorization);
-        var response = feriadoService.listarPorEmpresa(empresaId, page, size, observacao, httpRequest);
+        var response = feriadoService.listarPorEmpresa(empresaId, page, size, observacao, dataInicio, dataFim, httpRequest);
         return ResponseEntity.ok(response);
     }
 
