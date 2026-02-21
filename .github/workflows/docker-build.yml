@@ -1,4 +1,4 @@
-name: "1 - Build & Push Docker"
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push:
-    name: Build & Push
+    name: Build & Push Docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,3 +32,41 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/ponto-eletronico-api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy ArgoCD
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/
+
+      - name: Login no ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} \
+            --username admin \
+            --password '${{ secrets.ARGOCD_AUTH_TOKEN }}' \
+            --insecure \
+            --grpc-web
+
+      - name: Sync da Application
+        run: |
+          argocd app sync ponto-eletronico-api \
+            --grpc-web \
+            --force \
+            --prune
+
+      - name: Aguardar deploy saudável
+        run: |
+          argocd app wait ponto-eletronico-api \
+            --grpc-web \
+            --health \
+            --timeout 300
+
+      - name: Status final
+        if: always()
+        run: |
+          argocd app get ponto-eletronico-api --grpc-web || true
