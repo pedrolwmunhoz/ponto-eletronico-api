@@ -9,7 +9,8 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - http:
+    - host: api.criptoai.io
+      http:
         paths:
           - path: /
             pathType: Prefix
